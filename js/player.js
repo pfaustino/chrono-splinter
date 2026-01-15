@@ -42,6 +42,7 @@ class Player {
 
         // Visual
         this.thrusterFlicker = 0;
+        this.tilt = 0; // -1 to 1 (Left to Right)
 
         // Plasma Cannon State
         this.plasmaTimer = 0;
@@ -83,6 +84,9 @@ class Player {
             const { dx, dy } = Input.getMovement();
             this.x += dx * this.speed;
             this.y += dy * this.speed;
+
+            // Calculate tilt
+            this.tilt = Utils.lerp(this.tilt, dx, 0.1);
         }
 
         // Keep in bounds (respect HUD at top)
@@ -306,43 +310,98 @@ class Player {
 
         ctx.save();
 
+        // Apply tilt rotation/skew
+        const cx = this.x + this.width / 2;
+        const cy = this.y + this.height / 2;
+        ctx.translate(cx, cy);
+        ctx.rotate(this.tilt * 0.2); // Slight bank angle
+        ctx.translate(-cx, -cy);
+
         // Invincibility blink
         if (this.invincible && Math.floor(Date.now() / 100) % 2 === 0) {
             ctx.globalAlpha = 0.5;
         }
 
-        // Ship body (The Epoch)
-        ctx.fillStyle = COLORS.PRIMARY;
+        const x = this.x;
+        const y = this.y;
+        const w = this.width;
+        const h = this.height;
+
+        // --- THE EPOCH ---
+
+        // Engine Trails (Internal Glow)
+        ctx.fillStyle = COLORS.SECONDARY; // Orange glow
+        ctx.globalAlpha = 0.6;
+        const flicker = (this.thrusterFlicker / 10) * 5;
+        // Left Engine
         ctx.beginPath();
-        // Main hull
-        ctx.moveTo(this.x + this.width / 2, this.y); // Nose
-        ctx.lineTo(this.x + this.width, this.y + this.height * 0.7); // Right wing
-        ctx.lineTo(this.x + this.width * 0.7, this.y + this.height); // Right engine
-        ctx.lineTo(this.x + this.width * 0.3, this.y + this.height); // Left engine
-        ctx.lineTo(this.x, this.y + this.height * 0.7); // Left wing
+        ctx.moveTo(x + w * 0.2, y + h * 0.8);
+        ctx.lineTo(x + w * 0.3, y + h + 10 + flicker);
+        ctx.lineTo(x + w * 0.4, y + h * 0.8);
+        ctx.fill();
+        // Right Engine
+        ctx.beginPath();
+        ctx.moveTo(x + w * 0.6, y + h * 0.8);
+        ctx.lineTo(x + w * 0.7, y + h + 10 + flicker);
+        ctx.lineTo(x + w * 0.8, y + h * 0.8);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+
+        // Wings (Main Hull) - Sleek Forward Swept
+        ctx.fillStyle = '#e0e0e0'; // Platinum Hull
+        ctx.beginPath();
+        ctx.moveTo(x + w * 0.5, y); // Nose
+        ctx.lineTo(x + w, y + h * 0.6); // Right Wing Tip
+        ctx.lineTo(x + w * 0.8, y + h); // Right Engine Rear
+        ctx.lineTo(x + w * 0.5, y + h * 0.8); // Rear Center
+        ctx.lineTo(x + w * 0.2, y + h); // Left Engine Rear
+        ctx.lineTo(x, y + h * 0.6); // Left Wing Tip
         ctx.closePath();
         ctx.fill();
 
+        // Dark plating / Detail
+        ctx.fillStyle = '#2d3436';
+        ctx.beginPath();
+        ctx.moveTo(x + w * 0.5, y + h * 0.2);
+        ctx.lineTo(x + w * 0.7, y + h * 0.7);
+        ctx.lineTo(x + w * 0.3, y + h * 0.7);
+        ctx.fill();
+
+        // Cyan Energy Lines (Tron-like)
+        ctx.strokeStyle = COLORS.PRIMARY; // Cyan
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        // Center line
+        ctx.moveTo(x + w * 0.5, y + 5);
+        ctx.lineTo(x + w * 0.5, y + h * 0.9);
+        // Wing lines
+        ctx.moveTo(x + w * 0.2, y + h * 0.6);
+        ctx.lineTo(x + w * 0.4, y + h * 0.4);
+        ctx.moveTo(x + w * 0.8, y + h * 0.6);
+        ctx.lineTo(x + w * 0.6, y + h * 0.4);
+        ctx.stroke();
+
         // Cockpit
-        ctx.fillStyle = '#1a1a2e';
+        ctx.fillStyle = '#0984e3'; // Bright Blue Glass
         ctx.beginPath();
         ctx.ellipse(
-            this.x + this.width / 2,
-            this.y + this.height * 0.4,
-            this.width * 0.15,
-            this.height * 0.2,
+            x + w * 0.5,
+            y + h * 0.45,
+            w * 0.1,
+            h * 0.15,
             0, 0, Math.PI * 2
         );
         ctx.fill();
-
-        // Thruster glow
-        const thrusterSize = 5 + (this.thrusterFlicker < 5 ? 3 : 0);
-        ctx.fillStyle = COLORS.SECONDARY;
+        // Cockpit Glint
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
         ctx.beginPath();
-        ctx.moveTo(this.x + this.width * 0.35, this.y + this.height);
-        ctx.lineTo(this.x + this.width / 2, this.y + this.height + thrusterSize);
-        ctx.lineTo(this.x + this.width * 0.65, this.y + this.height);
-        ctx.closePath();
+        ctx.ellipse(
+            x + w * 0.52,
+            y + h * 0.42,
+            w * 0.03,
+            h * 0.05,
+            0, 0, Math.PI * 2
+        );
         ctx.fill();
 
         // Shield visual
@@ -352,8 +411,7 @@ class Player {
             ctx.globalAlpha = 0.5 + Math.sin(Date.now() / 200) * 0.3;
             ctx.beginPath();
             ctx.ellipse(
-                this.x + this.width / 2,
-                this.y + this.height / 2,
+                cx, cy,
                 this.width * 0.8,
                 this.height * 0.7,
                 0, 0, Math.PI * 2

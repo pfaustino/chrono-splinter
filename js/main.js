@@ -97,7 +97,7 @@ const Game = {
         this.lastTime = performance.now();
         requestAnimationFrame((t) => this.loop(t));
 
-        console.log('🚀 The Chrono-Splinter initialized!');
+        console.log(`🚀 The Chrono-Splinter v${GAME.VERSION} initialized!`);
     },
 
     startGame() {
@@ -120,21 +120,24 @@ const Game = {
         const deltaTime = currentTime - this.lastTime;
         this.lastTime = currentTime;
 
+        // Ensure input state is fresh every frame
+        Input.updateGamepad();
+
         // Handle Pause Input
         if (this.pauseCooldown > 0) this.pauseCooldown -= deltaTime;
 
         // Force user input for audio context
         if (this.waitingForInput) {
-            if (Input.isPressed('Space') || Input.isPressed('Enter') || (Input.gamepad && Input.isGamepadButtonPressed(9)) || Input.touch.active) {
+            // Space, Enter, Gamepad A (0) or Start (9), or Touch
+            if (Input.isPressed('Space') || Input.isPressed('Enter') ||
+                (Input.gamepad && (Input.isGamepadButtonPressed(0) || Input.isGamepadButtonPressed(9))) ||
+                Input.touch.active) {
                 this.startGame();
             }
             this.draw();
             requestAnimationFrame((t) => this.loop(t));
             return;
         }
-
-        // Escape or Gamepad Start (9)
-        Input.updateGamepad(); // Ensure fresh state
 
         // Special Modes Input Handling (Game Over / Chapter Complete)
         if (this.gameOver || this.chapterComplete) {

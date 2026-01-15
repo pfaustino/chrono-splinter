@@ -72,6 +72,23 @@ const Collision = {
     },
 
     collectPowerup(player, powerup) {
+        if (powerup.type === 'LIFE') {
+            if (player.lives < PLAYER.MAX_LIVES) {
+                player.lives++;
+                if (typeof Game !== 'undefined' && Game.addFloatingText) {
+                    Game.addFloatingText(player.x, player.y, '+1 LIFE', '#ff4757');
+                }
+                Audio.play('powerup');
+            } else {
+                player.addScore(500);
+                if (typeof Game !== 'undefined' && Game.addFloatingText) {
+                    Game.addFloatingText(player.x, player.y, '+500', '#ffd700');
+                }
+                Audio.play('coin');
+            }
+            return;
+        }
+
         if (powerup.isWeapon) {
             player.addWeaponMod(powerup.type);
         } else {

@@ -17,6 +17,8 @@ class Enemy {
         this.points = config.points;
         this.coins = config.coins;
         this.color = config.color;
+        this.color2 = config.color2 || config.color;
+        this.color3 = config.color3 || '#ffffff';
         this.splitInto = config.splitInto || 0;
 
         this.active = true;
@@ -170,85 +172,159 @@ class Enemy {
 
     drawDrifter(ctx, x, y) {
         // Angular, aggressive shape
+
+        // Hull (Secondary color - dark)
+        ctx.fillStyle = this.color2;
         ctx.beginPath();
         ctx.moveTo(x + this.width / 2, y + this.height);
         ctx.lineTo(x + this.width, y + this.height * 0.3);
-        ctx.lineTo(x + this.width * 0.7, y);
-        ctx.lineTo(x + this.width * 0.3, y);
         ctx.lineTo(x, y + this.height * 0.3);
         ctx.closePath();
         ctx.fill();
+
+        // Armor Plates (Primary color)
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.moveTo(x + this.width * 0.5, y + this.height * 0.8);
+        ctx.lineTo(x + this.width * 0.9, y + this.height * 0.3);
+        ctx.lineTo(x + this.width * 0.7, y);
+        ctx.lineTo(x + this.width * 0.3, y);
+        ctx.lineTo(x + this.width * 0.1, y + this.height * 0.3);
+        ctx.closePath();
+        ctx.fill();
+
+        // Engine vents / Eyes (Accent)
+        ctx.fillStyle = this.color3;
+        ctx.fillRect(x + this.width * 0.4, y + this.height * 0.4, this.width * 0.2, this.height * 0.1);
     }
 
     drawStitcher(ctx, x, y) {
-        // Circular repair drone
+        // Mechanical arms / Legs (Secondary)
+        ctx.strokeStyle = this.color2;
+        ctx.lineWidth = 4;
         ctx.beginPath();
-        ctx.arc(x + this.width / 2, y + this.height / 2, this.width / 2, 0, Math.PI * 2);
+        // X shape legs
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + this.width, y + this.height);
+        ctx.moveTo(x + this.width, y);
+        ctx.lineTo(x, y + this.height);
+        ctx.stroke();
+
+        // Main Body (Primary)
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(x + this.width / 2, y + this.height / 2, this.width * 0.35, 0, Math.PI * 2);
         ctx.fill();
 
-        // Cross symbol
-        ctx.strokeStyle = '#1a1a2e';
-        ctx.lineWidth = 3;
+        // Glowing Core (Accent)
+        ctx.fillStyle = this.color3;
         ctx.beginPath();
-        ctx.moveTo(x + this.width / 2, y + 5);
-        ctx.lineTo(x + this.width / 2, y + this.height - 5);
-        ctx.moveTo(x + 5, y + this.height / 2);
-        ctx.lineTo(x + this.width - 5, y + this.height / 2);
-        ctx.stroke();
+        ctx.arc(x + this.width / 2, y + this.height / 2, this.width * 0.15, 0, Math.PI * 2);
+        ctx.fill();
     }
 
     drawWraith(ctx, x, y) {
         // Ghost-like stealth bomber
-        ctx.globalAlpha = 0.7 + Math.sin(Date.now() / 200) * 0.3;
+        ctx.globalAlpha = 0.8 + Math.sin(Date.now() / 200) * 0.2;
+
+        // Inner Glow (Accent)
+        ctx.fillStyle = this.color3;
+        ctx.globalAlpha = 0.5;
         ctx.beginPath();
-        ctx.moveTo(x + this.width / 2, y);
+        ctx.arc(x + this.width / 2, y + this.height / 2, this.width / 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+
+        // Wings (Secondary)
+        ctx.fillStyle = this.color2;
+        ctx.beginPath();
+        ctx.moveTo(x + this.width / 2, y + this.height);
+        ctx.lineTo(x + this.width, y);
+        ctx.lineTo(x, y);
+        ctx.closePath();
+        ctx.fill();
+
+        // Main Fuselage (Primary)
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.moveTo(x + this.width / 2, y + this.height * 0.8);
         ctx.bezierCurveTo(
-            x + this.width, y + this.height * 0.3,
-            x + this.width, y + this.height,
-            x + this.width / 2, y + this.height
-        );
-        ctx.bezierCurveTo(
-            x, y + this.height,
-            x, y + this.height * 0.3,
+            x + this.width * 0.8, y + this.height * 0.2,
+            x + this.width * 0.8, y,
             x + this.width / 2, y
         );
+        ctx.bezierCurveTo(
+            x + this.width * 0.2, y,
+            x + this.width * 0.2, y + this.height * 0.2,
+            x + this.width / 2, y + this.height * 0.8
+        );
         ctx.fill();
-        ctx.globalAlpha = 1;
     }
 
     drawHarvester(ctx, x, y) {
         // Big chunky cargo ship
-        ctx.fillRect(x + 5, y, this.width - 10, this.height);
-        ctx.fillRect(x, y + 10, this.width, this.height - 20);
 
-        // Cargo bay lights
-        ctx.fillStyle = COLORS.COINS;
-        ctx.fillRect(x + 10, y + 15, 8, 8);
-        ctx.fillRect(x + this.width - 18, y + 15, 8, 8);
+        // Main block (Secondary - dark industrial)
+        ctx.fillStyle = this.color2;
+        ctx.fillRect(x, y, this.width, this.height);
+
+        // Armor plates (Primary)
+        ctx.fillStyle = this.color;
+        ctx.fillRect(x + 5, y + 5, this.width - 10, this.height - 10);
+
+        // Hazard Stripes (Accent)
+        ctx.fillStyle = this.color3;
+        for (let i = 0; i < 4; i++) {
+            ctx.fillRect(x + 10 + (i * 10), y + this.height - 8, 5, 8);
+            ctx.fillRect(x + 10 + (i * 10), y, 5, 8);
+        }
+
+        // Cargo pods (Darker)
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(x + 8, y + 15, 12, this.height - 30);
+        ctx.fillRect(x + this.width - 20, y + 15, 12, this.height - 30);
     }
 
     drawSplitter(ctx, x, y) {
         // Hexagonal shape that splits
         const sides = 6;
         const radius = this.width / 2;
-        ctx.beginPath();
-        for (let i = 0; i < sides; i++) {
-            const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
-            const px = x + this.width / 2 + Math.cos(angle) * radius;
-            const py = y + this.height / 2 + Math.sin(angle) * radius;
-            if (i === 0) ctx.moveTo(px, py);
-            else ctx.lineTo(px, py);
-        }
-        ctx.closePath();
+
+        // Outer Shell (Secondary)
+        ctx.fillStyle = this.color2;
+        this.drawPoly(ctx, x + this.width / 2, y + this.height / 2, radius, sides);
+        ctx.fill();
+
+        // Inner Shell (Primary)
+        ctx.fillStyle = this.color;
+        this.drawPoly(ctx, x + this.width / 2, y + this.height / 2, radius * 0.7, sides);
+        ctx.fill();
+
+        // Unstable Core (Accent - pulsing)
+        const pulse = 1 + Math.sin(Date.now() / 100) * 0.2;
+        ctx.fillStyle = this.color3;
+        this.drawPoly(ctx, x + this.width / 2, y + this.height / 2, radius * 0.3 * pulse, sides);
         ctx.fill();
 
         // Split line
-        ctx.strokeStyle = '#1a1a2e';
+        ctx.strokeStyle = '#000';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(x + this.width / 2, y);
         ctx.lineTo(x + this.width / 2, y + this.height);
         ctx.stroke();
+    }
+
+    drawPoly(ctx, x, y, radius, sides) {
+        ctx.beginPath();
+        for (let i = 0; i < sides; i++) {
+            const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
+            const px = x + Math.cos(angle) * radius;
+            const py = y + Math.sin(angle) * radius;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
     }
 }
 

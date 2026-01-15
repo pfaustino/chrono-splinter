@@ -6,6 +6,7 @@ const GAME = {
     WIDTH: 800,
     HEIGHT: 600,
     FPS: 60,
+    VERSION: '0.9.2.0',
 };
 
 const PLAYER = {
@@ -35,7 +36,9 @@ const ENEMY_TYPES = {
         health: 20,
         points: 100,
         coins: 1,
-        color: '#ff6b35',
+        color: '#ff6b35',   // Orange
+        color2: '#8B4513',  // SaddleBrown (Darker hull)
+        color3: '#FFFF00',  // Yellow (Engine glow)
     },
     STITCHER: {
         name: 'Stitcher',
@@ -45,7 +48,9 @@ const ENEMY_TYPES = {
         health: 15,
         points: 150,
         coins: 2,
-        color: '#50fa7b',
+        color: '#50fa7b',   // Green
+        color2: '#2F4F4F',  // DarkSlateGray (Mech parts)
+        color3: '#FF00FF',  // Magenta (Core/Laser)
     },
     WRAITH: {
         name: 'Wraith',
@@ -55,7 +60,9 @@ const ENEMY_TYPES = {
         health: 30,
         points: 200,
         coins: 3,
-        color: '#bd93f9',
+        color: '#bd93f9',   // Purple
+        color2: '#483D8B',  // DarkSlateBlue (Stealth coating)
+        color3: '#00FFFF',  // Cyan (Ethereal glow)
     },
     HARVESTER: {
         name: 'Harvester',
@@ -65,7 +72,9 @@ const ENEMY_TYPES = {
         health: 60,
         points: 300,
         coins: 5,
-        color: '#f1fa8c',
+        color: '#f1fa8c',   // Pale Yellow
+        color2: '#556B2F',  // DarkOliveGreen (Military cargo)
+        color3: '#FF4500',  // OrangeRed (Hazard lights)
     },
     SPLITTER: {
         name: 'Splitter',
@@ -75,7 +84,9 @@ const ENEMY_TYPES = {
         health: 25,
         points: 50,
         coins: 1,
-        color: '#ff79c6',
+        color: '#ff79c6',   // Pink
+        color2: '#800000',  // Maroon (Shell)
+        color3: '#00FF00',  // Lime (Unstable core)
         splitInto: 2,
     },
 };
@@ -83,6 +94,7 @@ const ENEMY_TYPES = {
 const POWERUP_TYPES = {
     // Temporary power-ups
     RAPID_FIRE: { name: 'Rapid Fire', duration: 15000, color: '#00bfff', symbol: '⚡' },
+    LIFE: { name: 'Extra Life', color: '#ff4757', symbol: '♥' },
     SHIELD: { name: 'Shield', duration: 0, hits: 3, color: '#ffd700', symbol: '🛡' },
     MAGNET: { name: 'Magnet', duration: 20000, color: '#da70d6', symbol: '🧲' },
     SLOW_MO: { name: 'Slow-Mo', duration: 10000, color: '#87ceeb', symbol: '⏱' },
