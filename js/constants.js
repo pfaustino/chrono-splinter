@@ -6,11 +6,11 @@ const GAME = {
     WIDTH: 800,
     HEIGHT: 600,
     FPS: 60,
-    VERSION: '0.9.4.0',
+    VERSION: '0.9.5.0',
 };
 
 const DIFFICULTIES = {
-    EASY: { name: 'EASY', hpMult: 0.5, dmgMult: 0.5, speedMult: 0.7, countMult: 0.5 },
+    EASY: { name: 'EASY', hpMult: 0.5, dmgMult: 0.5, speedMult: 0.7, countMult: 0.3 },
     NORMAL: { name: 'NORMAL', hpMult: 0.75, dmgMult: 0.75, speedMult: 0.85, countMult: 0.75 },
     HARD: { name: 'HARD', hpMult: 1.0, dmgMult: 1.0, speedMult: 1.0, countMult: 1.0 },
     EXPERT: { name: 'EXPERT', hpMult: 2.0, dmgMult: 2.0, speedMult: 1.3, countMult: 2.0 },
