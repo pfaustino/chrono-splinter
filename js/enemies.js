@@ -12,14 +12,18 @@ class Enemy {
         this.width = config.width;
         this.height = config.height;
         this.speed = config.speed;
-        this.health = config.health;
-        this.maxHealth = config.health;
+        const diff = DIFFICULTIES[Settings.difficulty || 'EASY'];
+        this.health = config.health * diff.hpMult;
+        this.maxHealth = config.health * diff.hpMult; // maxHealth should also reflect the difficulty multiplier
         this.points = config.points;
         this.coins = config.coins;
         this.color = config.color;
         this.color2 = config.color2 || config.color;
         this.color3 = config.color3 || '#ffffff';
         this.splitInto = config.splitInto || 0;
+
+        // Speed check (clamp so they don't become unplayable)
+        this.speed = Math.min(config.speed * diff.speedMult, 10);
 
         this.active = true;
         this.flashTimer = 0;

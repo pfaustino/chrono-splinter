@@ -4,6 +4,7 @@
 
 const Settings = {
     active: false,
+    difficulty: 'EASY',
     selectedIndex: 0,
     inputCooldown: 0,
     onClose: null,
@@ -12,6 +13,19 @@ const Settings = {
         {
             name: 'RESUME',
             action: (menu) => menu.close()
+        },
+        {
+            name: 'DIFFICULTY',
+            type: 'selector',
+            getValue: () => Settings.difficulty,
+            action: (menu, dir) => {
+                const levels = Object.keys(DIFFICULTIES);
+                let idx = levels.indexOf(Settings.difficulty);
+                if (idx === -1) idx = 0; // fallback
+                idx = (idx + dir + levels.length) % levels.length;
+                Settings.difficulty = levels[idx];
+                Audio.play('laser');
+            }
         },
         {
             name: 'MUSIC VOLUME',
@@ -49,11 +63,18 @@ const Settings = {
 
         // Setup input handlers
         this.setupTouch();
+
+        // Hide Game UI
+        UI.hideGameplayUI();
     },
 
     close() {
         this.active = false;
         this.removeTouch();
+
+        // Show Game UI
+        UI.showGameplayUI();
+
         if (this.onClose) this.onClose();
     },
 
@@ -120,6 +141,19 @@ const Settings = {
                     currentOption.action(this, dx);
                     this.inputCooldown = 150; // Faster repeat for sliders
                 }
+            } else if (currentOption.type === 'selector') {
+                if (Input.isPressed('ArrowLeft') || Input.isPressed('KeyA')) dx = -1;
+                if (Input.isPressed('ArrowRight') || Input.isPressed('KeyD')) dx = 1;
+                // Gamepad axes/dpad
+                if (Input.gamepad) {
+                    const axisX = Input.getGamepadAxis(0);
+                    if (axisX < -0.5 || Input.isGamepadButtonPressed(14)) dx = -1;
+                    if (axisX > 0.5 || Input.isGamepadButtonPressed(15)) dx = 1;
+                }
+                if (dx !== 0) {
+                    currentOption.action(this, dx);
+                    this.inputCooldown = 200;
+                }
             } else {
                 // Button
                 if (Input.isPressed('Enter') || Input.isPressed('Space') ||
@@ -171,6 +205,17 @@ const Settings = {
                         option.action(this, -1);
                         this.selectedIndex = i;
                     } else if (x > GAME.WIDTH / 2 + 200 && x < GAME.WIDTH / 2 + 240) {
+                        // Increase (>)
+                        option.action(this, 1);
+                        this.selectedIndex = i;
+                    }
+                } else if (option.type === 'selector') {
+                    // Check left/right buttons for selector (reuse slider zones roughly)
+                    if (x > GAME.WIDTH / 2 + 20 && x < GAME.WIDTH / 2 + 100) {
+                        // Decrease (<)
+                        option.action(this, -1);
+                        this.selectedIndex = i;
+                    } else if (x > GAME.WIDTH / 2 + 200 && x < GAME.WIDTH / 2 + 280) {
                         // Increase (>)
                         option.action(this, 1);
                         this.selectedIndex = i;
@@ -239,6 +284,18 @@ const Settings = {
                 ctx.fillStyle = isSelected ? '#fff' : '#888';
                 ctx.fillText(dots, GAME.WIDTH / 2 + 150, y);
 
+            } else if (option.type === 'selector') {
+                ctx.fillText(option.name, GAME.WIDTH / 2 - 100, y);
+
+                const value = option.getValue();
+                ctx.fillStyle = isSelected ? COLORS.PRIMARY : '#ccc';
+                ctx.fillText(value, GAME.WIDTH / 2 + 150, y);
+
+                if (isSelected) {
+                    ctx.fillStyle = COLORS.PRIMARY;
+                    ctx.fillText('<', GAME.WIDTH / 2 + 60, y);
+                    ctx.fillText('>', GAME.WIDTH / 2 + 240, y);
+                }
             } else {
                 ctx.fillText(option.name, GAME.WIDTH / 2, y);
             }

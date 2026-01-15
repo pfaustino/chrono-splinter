@@ -18,6 +18,19 @@ const UI = {
             document.getElementById('weapon-slot-1'),
             document.getElementById('weapon-slot-2'),
         ];
+
+        // Hide UI by default (Title Screen)
+        this.hideGameplayUI();
+    },
+
+    showGameplayUI() {
+        document.getElementById('hud').style.opacity = '1';
+        document.getElementById('weapon-bar').style.opacity = '1';
+    },
+
+    hideGameplayUI() {
+        document.getElementById('hud').style.opacity = '0';
+        document.getElementById('weapon-bar').style.opacity = '0';
     },
 
     update(player, chapter) {
@@ -131,6 +144,15 @@ const UI = {
             ctx.stroke();
         }
 
+        ctx.restore();
+    },
+
+    drawVersion(ctx) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.font = '10px "Courier New"';
+        ctx.textAlign = 'right';
+        ctx.fillText(`v${GAME.VERSION}`, GAME.WIDTH - 10, GAME.HEIGHT - 10);
         ctx.restore();
     },
 

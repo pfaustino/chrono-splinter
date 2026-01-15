@@ -103,6 +103,8 @@ const Game = {
     startGame() {
         this.waitingForInput = false;
 
+        UI.hideGameplayUI(); // Ensure UI is hidden for intro
+
         // Start Intro Music
         Audio.playMusic('intro');
         this.inIntro = true;
@@ -445,6 +447,7 @@ const Game = {
 
     completeChapterPhase() {
         this.chapterComplete = true;
+        UI.hideGameplayUI();
         this.inputCooldown = 1500; // Delay before accepting input to avoid accidental skips
     },
 
@@ -592,9 +595,13 @@ const Game = {
         }
 
         // Pause Button and Map Button (Always visible during gameplay)
-        if (!this.inIntro && !this.victory && !this.inShop) {
+        // Hide when firing to reduce clutter
+        if (!this.inIntro && !this.victory && !this.inShop && !Input.isFiring()) {
             UI.drawPauseButton(ctx);
         }
+
+        // Draw Version Number (Always)
+        UI.drawVersion(ctx);
 
         // Settings Menu Overlay
         if (Settings.active) {
@@ -690,6 +697,7 @@ const Game = {
 
     handleGameOver() {
         this.gameOver = true;
+        UI.hideGameplayUI();
         this.inputCooldown = 1000; // prevent instant restart
         // Play game over sound (music continues)
         Audio.play('gameover');

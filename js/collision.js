@@ -39,17 +39,18 @@ const Collision = {
             // Precise hitbox for player (tiny core)
             if (Utils.circleCollision(bullet, player, 0.4, 0.25)) {
                 particleManager.spawnImpact(player.x + player.width / 2, player.y + player.height / 2, '#ff0000');
-                const died = player.takeDamage(10);
+                const died = player.takeDamage(bullet.damage);
                 bullet.active = false;
                 if (died) return { gameOver: true, enemiesKilled };
             }
         }
 
         // Enemies vs player (collision damage - also counts as kill)
+        const diff = DIFFICULTIES[Settings.difficulty || 'EASY'];
         for (const enemy of enemyManager.enemies) {
             // Forgiving hitbox for ship crashing
             if (Utils.circleCollision(enemy, player, 0.4, 0.3)) {
-                const died = player.takeDamage(20);
+                const died = player.takeDamage(20 * diff.dmgMult);
                 const wasActive = enemy.active;
                 enemy.takeDamage(enemy.maxHealth);
                 if (wasActive && !enemy.active) {

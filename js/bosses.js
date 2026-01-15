@@ -996,51 +996,58 @@ class ProceduralBoss extends Boss {
 // Boss factory
 const Bosses = {
     create(name) {
+        let boss = null;
         switch (name) {
-            case 'SUNKEEPER': return new Sunkeeper();
-            case 'STORMWEAVER': return new Stormweaver();
-            case 'CHRONOWEAVER': return new ChronoWeaver();
+            case 'SUNKEEPER': boss = new Sunkeeper(); break;
+            case 'STORMWEAVER': boss = new Stormweaver(); break;
+            case 'CHRONOWEAVER': boss = new ChronoWeaver(); break;
 
             // New Bosses
-            case 'THEECHO': return new ProceduralBoss({
+            case 'THEECHO': boss = new ProceduralBoss({
                 name: 'The Echo', color: '#aaa', secondaryColor: '#555', shape: 'square',
                 health: 1400, movement: 'sine', attack: 'aimed'
-            });
-            case 'THEWARDEN': return new ProceduralBoss({
+            }); break;
+            case 'THEWARDEN': boss = new ProceduralBoss({
                 name: 'The Warden', color: '#d00', secondaryColor: '#500', shape: 'triangle',
                 health: 1600, movement: 'bounce', attack: 'scatter'
-            });
-            case 'THESIEGEBREAKER': return new ProceduralBoss({
+            }); break;
+            case 'THESIEGEBREAKER': boss = new ProceduralBoss({
                 name: 'The Siegebreaker', color: '#852', secondaryColor: '#421', shape: 'hexagon',
                 health: 1800, movement: 'figure8', attack: 'spiral'
-            });
-            case 'THETEMPEST': return new ProceduralBoss({
+            }); break;
+            case 'THETEMPEST': boss = new ProceduralBoss({
                 name: 'The Tempest', color: '#fa0', secondaryColor: '#840', shape: 'triangle',
                 health: 2000, movement: 'sine', attack: 'aimed'
-            });
-            case 'THELEVIATHAN': return new ProceduralBoss({
+            }); break;
+            case 'THELEVIATHAN': boss = new ProceduralBoss({
                 name: 'The Leviathan', color: '#00f', secondaryColor: '#008', shape: 'circle',
                 health: 2200, movement: 'figure8', attack: 'scatter'
-            });
-            case 'THERINGMASTER': return new ProceduralBoss({
+            }); break;
+            case 'THERINGMASTER': boss = new ProceduralBoss({
                 name: 'The Ringmaster', color: '#fd0', secondaryColor: '#860', shape: 'hexagon',
                 health: 2500, movement: 'bounce', attack: 'spiral'
-            });
-            case 'THEFORGEMASTER': return new ProceduralBoss({
+            }); break;
+            case 'THEFORGEMASTER': boss = new ProceduralBoss({
                 name: 'The Forgemaster', color: '#0ff', secondaryColor: '#088', shape: 'square',
                 health: 2800, movement: 'sine', attack: 'aimed'
-            });
-            case 'THEARCHITECT': return new ProceduralBoss({
+            }); break;
+            case 'THEARCHITECT': boss = new ProceduralBoss({
                 name: 'The Architect', color: '#f0f', secondaryColor: '#808', shape: 'triangle',
                 health: 3200, movement: 'figure8', attack: 'spiral'
-            });
-            case 'THELOOMCORE': return new ProceduralBoss({
+            }); break;
+            case 'THELOOMCORE': boss = new ProceduralBoss({
                 name: 'The Loom Core', color: '#000', secondaryColor: '#fff', shape: 'hexagon',
                 health: 5000, movement: 'sine', attack: 'scatter'
-            });
-
-            default: return null;
+            }); break;
         }
+
+        if (boss) {
+            const diff = DIFFICULTIES[Settings.difficulty || 'EASY'];
+            boss.health = Math.floor(boss.health * diff.hpMult);
+            boss.maxHealth = Math.floor(boss.maxHealth * diff.hpMult);
+        }
+
+        return boss;
     }
 };
 

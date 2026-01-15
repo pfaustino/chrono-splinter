@@ -413,15 +413,18 @@ class WaveManager {
         const wave = this.waves[waveNum - 1];
         if (!wave) return;
 
+        const diff = DIFFICULTIES[Settings.difficulty || 'EASY'];
+
         // Spawn enemies with delays
         let totalDelay = 0;
         for (const group of wave.enemies) {
-            for (let i = 0; i < group.count; i++) {
+            const count = Math.ceil(group.count * diff.countMult);
+            for (let i = 0; i < count; i++) {
                 totalDelay += group.delay;
                 this.enemiesRemaining++;
 
                 setTimeout(() => {
-                    this.spawnEnemy(group.type, group.pattern, i, group.count, enemyManager);
+                    this.spawnEnemy(group.type, group.pattern, i, count, enemyManager);
                 }, totalDelay);
             }
         }

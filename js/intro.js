@@ -147,6 +147,9 @@ const ChapterIntro = {
         this.onComplete = onComplete;
         this.phase = 'fadeIn';
         this.phaseTimer = 0;
+
+        UI.hideGameplayUI(); // Hide UI during intro
+
         this.fadeAlpha = 1;
         this.titleScale = 0;
         this.preTextAlpha = 0;
@@ -195,6 +198,9 @@ const ChapterIntro = {
         Audio.setMusicVolume(0.4); // Restore music volume
         window.removeEventListener('keydown', this.keyHandler);
         document.removeEventListener('touchstart', this.touchHandler);
+
+        UI.showGameplayUI(); // Show UI when gameplay starts
+
         if (this.onComplete) this.onComplete();
     },
 

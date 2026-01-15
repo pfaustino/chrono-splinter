@@ -153,7 +153,8 @@ class BulletManager {
     }
 
     createEnemyBullet(x, y, angle, damage) {
-        const bullet = new Bullet(x, y, angle, damage, false);
+        const diff = DIFFICULTIES[Settings.difficulty || 'EASY'];
+        const bullet = new Bullet(x, y, angle, damage * diff.dmgMult, false);
         bullet.speed = 6; // Slower than player bullets
         this.enemyBullets.push(bullet);
     }

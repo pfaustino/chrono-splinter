@@ -85,6 +85,8 @@ const Ending = {
         this.fadeAlpha = 1;
         this.generateStars();
         this.inputCooldown = 2000; // Delay before allowing restart
+
+        UI.hideGameplayUI();
     },
 
     restart() {

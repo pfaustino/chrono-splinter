@@ -24,7 +24,11 @@ const Shop = {
         this.player = player;
         this.onClose = onClose;
         this.selectedIndex = 0;
+        this.selectedIndex = 0;
         this.inputCooldown = 0;
+
+        // Hide UI
+        UI.hideGameplayUI();
 
         // Set up input handling
         this.keyHandler = (e) => this.handleInput(e);

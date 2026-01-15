@@ -6,7 +6,7 @@ const GAME = {
     WIDTH: 800,
     HEIGHT: 600,
     FPS: 60,
-    VERSION: '0.9.3.1',
+    VERSION: '0.9.4.0',
 };
 
 const DIFFICULTIES = {
