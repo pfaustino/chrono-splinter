@@ -16,7 +16,7 @@ const ChapterIntro = {
     // Timing configuration (in ms)
     timing: {
         fadeIn: 1500,
-        preText: 3000,
+        preText: 10000,
         titleReveal: 2500,
         fadeOut: 1000,
     },
@@ -89,6 +89,42 @@ const ChapterIntro = {
                 '',
                 'Commander Vance returns home...',
             ]
+        },
+        4: {
+            title: 'CHAPTER IV', subtitle: 'THE ECHO', preText: 'Earth orbit is secure...',
+            text: ['The gate is open.', '', 'But the path forward is blocked', 'by a temporal anomaly known', 'as THE ECHO.', '', 'Commander Vance must silence', 'this disturbance to proceed.']
+        },
+        5: {
+            title: 'CHAPTER V', subtitle: 'MARS', preText: 'The Red Planet calls...',
+            text: ['The Continuance has fortified', 'the rusting plains of Mars.', '', 'THE WARDEN oversees the', 'labor camps here.', '', 'Break the chains.', 'Free the timeline.']
+        },
+        6: {
+            title: 'CHAPTER VI', subtitle: 'ASTEROID BELT', preText: 'Into the debris field...',
+            text: ['Navigating the asteroid belt', 'is suicide for most.', '', 'But THE SIEGEBREAKER uses', 'these rocks as weapons.', '', 'Dodge, weave, and destroy.']
+        },
+        7: {
+            title: 'CHAPTER VII', subtitle: 'JUPITER', preText: 'The Giant awakens...',
+            text: ['The Great Red Spot hides', 'a massive energy siphon.', '', 'THE TEMPEST harnesses the', 'storms of Jupiter.', '', 'Fly into the eye of the storm.']
+        },
+        8: {
+            title: 'CHAPTER VIII', subtitle: 'EUROPA', preText: 'Beneath the ice...',
+            text: ['Deep beneath the frozen crust', 'lies a hidden base.', '', 'THE LEVIATHAN guards the', 'sub-surface reactors.', '', 'Depth charges primed.']
+        },
+        9: {
+            title: 'CHAPTER IX', subtitle: 'SATURN', preText: 'The Rings of Time...',
+            text: ['Saturn\'s rings are beautiful.', 'And deadly.', '', 'THE RINGMASTER conducts a', 'symphony of destruction.', '', 'Silence the music.']
+        },
+        10: {
+            title: 'CHAPTER X', subtitle: 'URANUS', preText: 'The Cold Forge...',
+            text: ['In the freezing dark,', 'new weapons are born.', '', 'THE FORGEMASTER builds the', 'Continuance fleet here.', '', 'Shut down the factory.']
+        },
+        11: {
+            title: 'CHAPTER XI', subtitle: 'NEPTUNE', preText: 'The Edge of Light...',
+            text: ['The furthest outpost.', 'The final line of defense.', '', 'THE ARCHITECT designs the', 'paradoxes we fight.', '', 'Destroy the blueprints.']
+        },
+        12: {
+            title: 'CHAPTER XII', subtitle: 'THE SOURCE', preText: 'Where time ends...',
+            text: ['Here at the end of all things.', 'The center of the web.', '', 'THE LOOM CORE weaves', 'history to their will.', '', 'Cut the thread.', 'Save the future.']
         }
     },
 
@@ -114,6 +150,7 @@ const ChapterIntro = {
         this.fadeAlpha = 1;
         this.titleScale = 0;
         this.preTextAlpha = 0;
+        this.voiceStarted = false; // Flag to track voice delay
         this.scrollY = GAME.HEIGHT + 50;
 
         const intro = this.intros[chapterNum];
@@ -129,6 +166,10 @@ const ChapterIntro = {
 
         // Generate starfield
         this.generateStars();
+
+        // Voice will start in 'crawl' phase
+        // Duck music immediately for atmosphere
+        Audio.setMusicVolume(0.1);
 
         // Skip handler
         this.keyHandler = (e) => {
@@ -150,6 +191,8 @@ const ChapterIntro = {
 
     finish() {
         this.active = false;
+        Audio.stopVoice();
+        Audio.setMusicVolume(0.4); // Restore music volume
         window.removeEventListener('keydown', this.keyHandler);
         document.removeEventListener('touchstart', this.touchHandler);
         if (this.onComplete) this.onComplete();
@@ -208,6 +251,12 @@ const ChapterIntro = {
                 break;
 
             case 'crawl':
+                // Check for voice delay (5 seconds)
+                if (!this.voiceStarted && this.phaseTimer >= 5000) {
+                    Audio.playVoice(`chapter_${this.chapter}`);
+                    this.voiceStarted = true;
+                }
+
                 // Scroll the text
                 this.scrollY -= this.scrollSpeed;
 

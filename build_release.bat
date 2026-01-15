@@ -18,7 +18,7 @@ copy index.html %RELEASE_DIR%\
 
 echo 📦 Zipping files to %ZIP_NAME%...
 if exist %ZIP_NAME% del %ZIP_NAME%
-powershell.exe -nologo -noprofile -ExecutionPolicy Bypass -command "& { Compress-Archive -Path '%RELEASE_DIR%\*' -DestinationPath '%ZIP_NAME%' -Force }"
+powershell.exe -nologo -noprofile -ExecutionPolicy Bypass -command "& { Push-Location '%RELEASE_DIR%'; Compress-Archive -Path * -DestinationPath '..\%ZIP_NAME%' -Force; Pop-Location }"
 
 echo ✅ Build Complete!
 echo 📁 Release folder: %RELEASE_DIR%

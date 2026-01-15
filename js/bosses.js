@@ -854,6 +854,7 @@ class ProceduralBoss extends Boss {
         this.maxHealth = this.health;
         this.color = config.color || '#fff';
         this.secondaryColor = config.secondaryColor || '#888';
+        this.shape = config.shape || 'circle'; // circle, square, triangle, hexagon
     }
 
     update(deltaTime, player, bulletManager) {
@@ -945,9 +946,36 @@ class ProceduralBoss extends Boss {
         ctx.arc(cx, cy, 60, 0, Math.PI * 2);
         ctx.fill();
 
-        // Core
+        // Core Shape
         ctx.fillStyle = this.phaseTransition ? '#fff' : this.color;
-        ctx.fillRect(cx - 30, cy - 30, 60, 60);
+
+        switch (this.shape) {
+            case 'square':
+                ctx.fillRect(cx - 40, cy - 40, 80, 80);
+                break;
+            case 'triangle':
+                ctx.beginPath();
+                ctx.moveTo(cx, cy - 50);
+                ctx.lineTo(cx + 45, cy + 30);
+                ctx.lineTo(cx - 45, cy + 30);
+                ctx.closePath();
+                ctx.fill();
+                break;
+            case 'hexagon':
+                ctx.beginPath();
+                for (let i = 0; i < 6; i++) {
+                    const angle = i * Math.PI / 3;
+                    const r = 45;
+                    ctx.lineTo(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
+                }
+                ctx.closePath();
+                ctx.fill();
+                break;
+            default: // circle
+                ctx.beginPath();
+                ctx.arc(cx, cy, 40, 0, Math.PI * 2);
+                ctx.fill();
+        }
 
         // Eyes
         ctx.fillStyle = '#fff';
@@ -975,39 +1003,39 @@ const Bosses = {
 
             // New Bosses
             case 'THEECHO': return new ProceduralBoss({
-                name: 'The Echo', color: '#aaa', secondaryColor: '#555',
+                name: 'The Echo', color: '#aaa', secondaryColor: '#555', shape: 'square',
                 health: 1400, movement: 'sine', attack: 'aimed'
             });
             case 'THEWARDEN': return new ProceduralBoss({
-                name: 'The Warden', color: '#d00', secondaryColor: '#500',
+                name: 'The Warden', color: '#d00', secondaryColor: '#500', shape: 'triangle',
                 health: 1600, movement: 'bounce', attack: 'scatter'
             });
             case 'THESIEGEBREAKER': return new ProceduralBoss({
-                name: 'The Siegebreaker', color: '#852', secondaryColor: '#421',
+                name: 'The Siegebreaker', color: '#852', secondaryColor: '#421', shape: 'hexagon',
                 health: 1800, movement: 'figure8', attack: 'spiral'
             });
             case 'THETEMPEST': return new ProceduralBoss({
-                name: 'The Tempest', color: '#fa0', secondaryColor: '#840',
+                name: 'The Tempest', color: '#fa0', secondaryColor: '#840', shape: 'triangle',
                 health: 2000, movement: 'sine', attack: 'aimed'
             });
             case 'THELEVIATHAN': return new ProceduralBoss({
-                name: 'The Leviathan', color: '#00f', secondaryColor: '#008',
+                name: 'The Leviathan', color: '#00f', secondaryColor: '#008', shape: 'circle',
                 health: 2200, movement: 'figure8', attack: 'scatter'
             });
             case 'THERINGMASTER': return new ProceduralBoss({
-                name: 'The Ringmaster', color: '#fd0', secondaryColor: '#860',
+                name: 'The Ringmaster', color: '#fd0', secondaryColor: '#860', shape: 'hexagon',
                 health: 2500, movement: 'bounce', attack: 'spiral'
             });
             case 'THEFORGEMASTER': return new ProceduralBoss({
-                name: 'The Forgemaster', color: '#0ff', secondaryColor: '#088',
+                name: 'The Forgemaster', color: '#0ff', secondaryColor: '#088', shape: 'square',
                 health: 2800, movement: 'sine', attack: 'aimed'
             });
             case 'THEARCHITECT': return new ProceduralBoss({
-                name: 'The Architect', color: '#f0f', secondaryColor: '#808',
+                name: 'The Architect', color: '#f0f', secondaryColor: '#808', shape: 'triangle',
                 health: 3200, movement: 'figure8', attack: 'spiral'
             });
             case 'THELOOMCORE': return new ProceduralBoss({
-                name: 'The Loom Core', color: '#000', secondaryColor: '#fff',
+                name: 'The Loom Core', color: '#000', secondaryColor: '#fff', shape: 'hexagon',
                 health: 5000, movement: 'sine', attack: 'scatter'
             });
 

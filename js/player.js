@@ -37,14 +37,21 @@ class Player {
             FIRE_RATE: 0,
         };
 
+        // Drones
+        this.drones = [];
+
         // Visual
         this.thrusterFlicker = 0;
+
+        // Plasma Cannon State
+        this.plasmaTimer = 0;
+        this.plasmaThreshold = 2000; // 2 seconds to charge
     }
 
     /**
      * Update player state
      */
-    update(deltaTime) {
+    update(deltaTime, particleManager, enemyManager, bulletManager) {
         // Check for touch/drag target first
         const touchTarget = Input.getTouchTarget();
 
@@ -90,8 +97,22 @@ class Player {
         // Update active power-ups
         this.updatePowerups();
 
-        // Thruster animation
+        // Thruster animation & particles
         this.thrusterFlicker = (this.thrusterFlicker + 1) % 10;
+
+        // Spawn thruster particles (if manager provided)
+        if (particleManager && Math.random() < 0.3) {
+            particleManager.spawnTrail(
+                this.x + this.width / 2,
+                this.y + this.height,
+                COLORS.SECONDARY || '#ff6b35'
+            );
+        }
+
+        // Update drones
+        for (const drone of this.drones) {
+            drone.update(deltaTime, enemyManager?.enemies || [], bulletManager);
+        }
     }
 
     /**
@@ -148,6 +169,35 @@ class Player {
 
         // Play laser sound
         Audio.play('laser');
+
+        // Plasma Cannon Logic
+        if (this.hasWeaponMod('PLASMA_CANNON')) {
+            // Charge up
+            this.plasmaTimer += PLAYER.FIRE_RATE;
+
+            // Visual charge effect (handled in draw or particles?)
+
+            if (this.plasmaTimer >= this.plasmaThreshold) {
+                this.firePlasma(bulletManager);
+                this.plasmaTimer = 0;
+            }
+        } else {
+            this.plasmaTimer = 0;
+        }
+    }
+
+    firePlasma(bulletManager) {
+        bulletManager.createPlayerBullet(
+            this.x + this.width / 2,
+            this.y,
+            -Math.PI / 2,
+            this.atk * 5, // 5x Damage
+            { plasma: true, piercing: true }
+        );
+        Audio.play('explosion'); // Heavy sound for now
+
+        // recoil?
+        this.y += 5;
     }
 
     /**
@@ -169,6 +219,11 @@ class Player {
         const actualDamage = Math.max(1, amount * (1 - this.def / 100));
 
         this.lives--;
+
+        // Visual Feedback
+        Game.triggerShake(10, 300);
+        Game.addFloatingText(this.x, this.y, `-${Math.round(actualDamage)}`, '#ff0000');
+
         this.invincible = true;
         this.invincibleUntil = Date.now() + PLAYER.INVINCIBILITY_TIME;
 
@@ -203,6 +258,11 @@ class Player {
             this.weaponMods.shift();
         }
         this.weaponMods.push(type);
+
+        // Initialize Drone if added
+        if (type === 'DRONE') {
+            this.drones.push(new Drone(this));
+        }
     }
 
     /**
@@ -239,6 +299,11 @@ class Player {
      * Draw the player ship
      */
     draw(ctx) {
+        // Draw drones first (under/around ship)
+        for (const drone of this.drones) {
+            drone.draw(ctx);
+        }
+
         ctx.save();
 
         // Invincibility blink

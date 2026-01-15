@@ -19,10 +19,19 @@ class Bullet {
         this.homing = options.homing || false;
         this.ricochet = options.ricochet || false;
         this.ricochetCount = options.ricochet ? 3 : 0;
+        this.plasma = options.plasma || false;
+
+        if (this.plasma) {
+            this.width = 40;
+            this.height = 80;
+            this.damage *= 2; // Further boost (already 5x from player)
+            this.speed *= 0.8; // Slower, heavier feel
+            this.color = '#00ffff'; // Cyan
+        }
 
         // Visual
         this.trail = [];
-        this.color = isPlayerBullet ? BULLET.COLOR : COLORS.SECONDARY;
+        this.color = this.plasma ? '#00ffff' : (isPlayerBullet ? BULLET.COLOR : COLORS.SECONDARY);
     }
 
     update(deltaTime, enemies, player) {

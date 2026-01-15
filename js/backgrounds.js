@@ -590,6 +590,18 @@ class ProceduralBackground extends Background {
         this.config = config;
         this.elements = [];
 
+        // Load Planet Image if available
+        if (config.image) {
+            this.planet = new Image();
+            this.planet.src = config.image;
+
+            this.planetSize = config.size || 400;
+            this.planetX = GAME.WIDTH / 2 - this.planetSize / 2;
+            this.planetY = GAME.HEIGHT + 100; // Start below screen
+            this.targetPlanetY = GAME.HEIGHT - this.planetSize + 100; // Rise up
+            this.planetSpeed = 0.2;
+        }
+
         // Generate specific elements based on type
         if (config.type === 'asteroids') {
             for (let i = 0; i < 20; i++) this.spawnAsteroid();
@@ -626,6 +638,11 @@ class ProceduralBackground extends Background {
     update(deltaTime) {
         super.update(deltaTime);
 
+        // Move planet into position
+        if (this.planet && this.planetY > this.targetPlanetY) {
+            this.planetY -= this.planetSpeed;
+        }
+
         for (const el of this.elements) {
             el.y += el.speed;
             if (el.type === 'asteroid') el.rotation += el.rotSpeed;
@@ -648,6 +665,19 @@ class ProceduralBackground extends Background {
         // Stars
         super.draw(ctx);
 
+        // Draw Planet Image (Behind elements)
+        if (this.planet && this.planet.complete) {
+            ctx.save();
+            ctx.drawImage(this.planet, this.planetX, this.planetY, this.planetSize, this.planetSize);
+            ctx.restore();
+        } else if (this.config.planetName && !this.planet) {
+            // Text fallback only if no image
+            ctx.fillStyle = 'rgba(255,255,255,0.05)';
+            ctx.font = '100px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(this.config.planetName.toUpperCase(), GAME.WIDTH / 2, GAME.HEIGHT / 2);
+        }
+
         // Elements
         for (const el of this.elements) {
             if (el.type === 'asteroid') {
@@ -666,15 +696,6 @@ class ProceduralBackground extends Background {
                 ctx.globalAlpha = 1;
             }
         }
-
-        // Planet feature (if any)
-        if (this.config.planetName) {
-            // Placeholder text for planet if no image
-            ctx.fillStyle = 'rgba(255,255,255,0.05)';
-            ctx.font = '100px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(this.config.planetName.toUpperCase(), GAME.WIDTH / 2, GAME.HEIGHT / 2);
-        }
     }
 }
 
@@ -691,25 +712,31 @@ const Backgrounds = {
                 planetName: 'The Moon', topColor: '#1a1a1a', bottomColor: '#000', type: 'asteroids'
             });
             case 5: return new ProceduralBackground({
-                planetName: 'Mars', topColor: '#3d1a1a', bottomColor: '#1a0a0a', type: 'dust', dustColor: 'rgba(200,50,0,0.2)'
+                planetName: 'Mars', topColor: '#3d1a1a', bottomColor: '#1a0a0a', type: 'dust',
+                dustColor: 'rgba(200,50,0,0.2)', image: 'assets/mars.png', size: 500
             });
             case 6: return new ProceduralBackground({
                 planetName: 'Asteroid Belt', topColor: '#000', bottomColor: '#111', type: 'asteroids'
             });
             case 7: return new ProceduralBackground({
-                planetName: 'Jupiter', topColor: '#4d2e00', bottomColor: '#2e1a00', type: 'dust', dustColor: 'rgba(200,100,0,0.1)'
+                planetName: 'Jupiter', topColor: '#4d2e00', bottomColor: '#2e1a00', type: 'gas_giant',
+                image: 'assets/jupiter.png', size: 600
             });
             case 8: return new ProceduralBackground({
-                planetName: 'Europa', topColor: '#001a1a', bottomColor: '#000', type: 'dust', dustColor: 'rgba(100,200,255,0.05)'
+                planetName: 'Europa', topColor: '#001a1a', bottomColor: '#000', type: 'dust',
+                dustColor: 'rgba(100,200,255,0.05)'
             });
             case 9: return new ProceduralBackground({
-                planetName: 'Saturn', topColor: '#2e2e1a', bottomColor: '#1a1a0a', type: 'dust', dustColor: 'rgba(200,200,100,0.1)'
+                planetName: 'Saturn', topColor: '#2e2e1a', bottomColor: '#1a1a0a', type: 'gas_giant',
+                dustColor: 'rgba(200,200,100,0.1)', image: 'assets/saturn.png', size: 550
             });
             case 10: return new ProceduralBackground({
-                planetName: 'Uranus', topColor: '#002e2e', bottomColor: '#001a1a', type: 'dust', dustColor: 'rgba(100,255,255,0.05)'
+                planetName: 'Uranus', topColor: '#002e2e', bottomColor: '#001a1a', type: 'gas_giant',
+                dustColor: 'rgba(100,255,255,0.05)', image: 'assets/uranus.png', size: 500
             });
             case 11: return new ProceduralBackground({
-                planetName: 'Neptune', topColor: '#00002e', bottomColor: '#00001a', type: 'dust', dustColor: 'rgba(50,50,200,0.1)'
+                planetName: 'Neptune', topColor: '#00002e', bottomColor: '#00001a', type: 'gas_giant',
+                dustColor: 'rgba(50,50,200,0.1)', image: 'assets/neptune.png', size: 500
             });
             case 12: return new ProceduralBackground({
                 planetName: 'The Edge', topColor: '#110011', bottomColor: '#000', type: 'none'

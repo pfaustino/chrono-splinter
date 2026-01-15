@@ -38,6 +38,29 @@ const Utils = {
     },
 
     /**
+     * Check if two circles overlap
+     * Assumes objects have x, y, width, height (uses min dimension for radius)
+     * Optional: can pass custom radius multiplier (e.g. 0.8 for smaller hitboxes)
+     */
+    circleCollision(a, b, scaleA = 0.4, scaleB = 0.4) { // Default to 40% width as radius (creates a forgiving, smaller hitbox)
+        if (!a || !b) return false;
+
+        const rA = (Math.min(a.width, a.height) / 2) * scaleA;
+        const rB = (Math.min(b.width, b.height) / 2) * scaleB;
+
+        const cxA = a.x + a.width / 2;
+        const cyA = a.y + a.height / 2;
+        const cxB = b.x + b.width / 2;
+        const cyB = b.y + b.height / 2;
+
+        const dx = cxA - cxB;
+        const dy = cyA - cyB;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        return distance < (rA + rB);
+    },
+
+    /**
      * Get distance between two points
      */
     distance(x1, y1, x2, y2) {

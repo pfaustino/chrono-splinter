@@ -3,14 +3,16 @@
 // ============================================
 
 const Collision = {
-    checkAll(player, bulletManager, enemyManager, powerupManager, coinManager) {
+    checkAll(player, bulletManager, enemyManager, powerupManager, coinManager, particleManager) {
         let enemiesKilled = 0;
 
         // Player bullets vs enemies
         for (const bullet of bulletManager.playerBullets) {
             for (const enemy of enemyManager.enemies) {
-                if (Utils.rectCollision(bullet, enemy)) {
+                // Use generous circle collision for shooting enemies (easier to hit)
+                if (Utils.circleCollision(bullet, enemy, 0.5, 0.45)) {
                     const killed = enemy.takeDamage(bullet.damage);
+                    particleManager.spawnImpact(bullet.x, bullet.y, '#fff', bullet.angle + Math.PI); // Spark opposite to bullet
                     bullet.onHit();
 
                     if (killed) {
@@ -21,6 +23,7 @@ const Collision = {
 
                         // Play explosion sound
                         Audio.play('explosion');
+                        particleManager.spawnExplosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, enemy.color, 15);
 
                         if (enemy.splitInto > 0) {
                             enemyManager.spawnSplitEnemies(enemy);
@@ -33,7 +36,9 @@ const Collision = {
 
         // Enemy bullets vs player
         for (const bullet of bulletManager.enemyBullets) {
-            if (Utils.rectCollision(bullet, player)) {
+            // Precise hitbox for player (tiny core)
+            if (Utils.circleCollision(bullet, player, 0.4, 0.25)) {
+                particleManager.spawnImpact(player.x + player.width / 2, player.y + player.height / 2, '#ff0000');
                 const died = player.takeDamage(10);
                 bullet.active = false;
                 if (died) return { gameOver: true, enemiesKilled };
@@ -42,7 +47,8 @@ const Collision = {
 
         // Enemies vs player (collision damage - also counts as kill)
         for (const enemy of enemyManager.enemies) {
-            if (Utils.rectCollision(enemy, player)) {
+            // Forgiving hitbox for ship crashing
+            if (Utils.circleCollision(enemy, player, 0.4, 0.3)) {
                 const died = player.takeDamage(20);
                 const wasActive = enemy.active;
                 enemy.takeDamage(enemy.maxHealth);

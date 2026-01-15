@@ -13,9 +13,9 @@ const Ending = {
     timing: {
         fadeIn: 2000,
         title: 4000,
-        story: 8000,
+        story: 25000, // Increased to allow reading
         stats: 5000,
-        credits: 10000,
+        credits: 30000, // Increased for longer credits
         fadeOut: 2000,
     },
 
@@ -43,7 +43,7 @@ const Ending = {
     credits: [
         { role: 'THE CHRONO-SPLINTER', name: '' },
         { role: '', name: '' },
-        { role: 'A Game By', name: 'You' },
+        { role: 'A Game By', name: 'Patrick Faustino' },
         { role: '', name: '' },
         { role: 'Programming', name: 'Collaborative AI + Human' },
         { role: 'Game Design', name: 'Collaborative AI + Human' },
@@ -84,18 +84,10 @@ const Ending = {
         this.scrollY = GAME.HEIGHT;
         this.fadeAlpha = 1;
         this.generateStars();
-
-        // Skip handler
-        this.keyHandler = (e) => {
-            if (e.code === 'Enter') {
-                this.restart();
-            }
-        };
-        window.addEventListener('keydown', this.keyHandler);
+        this.inputCooldown = 2000; // Delay before allowing restart
     },
 
     restart() {
-        window.removeEventListener('keydown', this.keyHandler);
         location.reload();
     },
 
@@ -131,7 +123,7 @@ const Ending = {
                 break;
 
             case 'story':
-                this.scrollY -= 0.5;
+                this.scrollY -= 1.2; // Increased scroll speed
                 if (this.phaseTimer >= this.timing.story) {
                     this.phase = 'stats';
                     this.phaseTimer = 0;
@@ -155,7 +147,29 @@ const Ending = {
                 break;
 
             case 'end':
-                // Just wait for player to press Enter
+                // Cooldown
+                if (this.inputCooldown > 0) {
+                    this.inputCooldown -= deltaTime;
+                } else {
+                    // Check for restart input
+                    let restart = false;
+
+                    // Keyboard
+                    if (Input.isPressed('Enter') || Input.isPressed('Space')) restart = true;
+
+                    // Gamepad (A or Start)
+                    if (Input.gamepad) {
+                        if (Input.isGamepadButtonPressed(0)) restart = true;
+                        if (Input.isGamepadButtonPressed(9)) restart = true;
+                    }
+
+                    // Touch
+                    if (Input.touch.active) restart = true;
+
+                    if (restart) {
+                        this.restart();
+                    }
+                }
                 break;
         }
     },
@@ -269,8 +283,8 @@ const Ending = {
         const stats = [
             { label: 'FINAL SCORE', value: this.player ? this.player.score.toLocaleString() : '0' },
             { label: 'COINS COLLECTED', value: this.player ? this.player.coins.toString() : '0' },
-            { label: 'BOSSES DEFEATED', value: '3 / 3' },
-            { label: 'CHAPTERS COMPLETED', value: '3 / 3' },
+            { label: 'BOSSES DEFEATED', value: '12 / 12' },
+            { label: 'CHAPTERS COMPLETED', value: '12 / 12' },
         ];
 
         ctx.font = '16px "Courier New"';
@@ -351,7 +365,7 @@ const Ending = {
         // Pulsing prompt
         ctx.globalAlpha = 0.5 + Math.sin(Date.now() / 400) * 0.3;
         ctx.fillStyle = COLORS.COINS;
-        ctx.fillText('Press ENTER to play again', 0, 60);
+        ctx.fillText('Press ENTER or Tap to play again', 0, 60);
 
         ctx.restore();
     }

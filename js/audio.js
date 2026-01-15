@@ -5,7 +5,9 @@
 const Audio = {
     sounds: {},
     music: {},
+    voices: {},
     currentMusic: null,
+    currentVoice: null,
     enabled: true,
     volume: 0.5,
     musicVolume: 0.4, // Music slightly quieter than SFX by default
@@ -24,6 +26,9 @@ const Audio = {
             this.loadMusic('boss', MUSIC.BOSS);
         }
 
+        // Preload voices
+        this.preloadVoices();
+
         console.log('🔊 Audio system initialized');
     },
 
@@ -40,6 +45,24 @@ const Audio = {
         audio.loop = true;
         audio.volume = this.musicVolume;
         this.music[name] = audio;
+    },
+
+    loadVoice(name, src) {
+        const audio = new window.Audio(src);
+        audio.preload = 'auto';
+        audio.loop = false;
+        audio.volume = 1.0; // Max volume for voices
+        this.voices[name] = audio;
+    },
+
+    preloadVoices() {
+        const roman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+        for (let i = 1; i <= 12; i++) {
+            const num = roman[i - 1];
+            if (num) {
+                this.loadVoice(`chapter_${i}`, `assets/voice/chapter-${num}.mp3`);
+            }
+        }
     },
 
     play(name) {
@@ -72,6 +95,28 @@ const Audio = {
         }
     },
 
+    playVoice(name) {
+        if (!this.enabled) return;
+
+        this.stopVoice();
+
+        const track = this.voices[name];
+        if (track) {
+            track.currentTime = 0;
+            track.volume = 1.0; // Ensure max volume
+            track.play().catch(e => console.log('Voice play failed:', e));
+            this.currentVoice = name;
+        }
+    },
+
+    stopVoice() {
+        if (this.currentVoice && this.voices[this.currentVoice]) {
+            this.voices[this.currentVoice].pause();
+            this.voices[this.currentVoice].currentTime = 0;
+        }
+        this.currentVoice = null;
+    },
+
     stopMusic() {
         // Force pause all music tracks to prevent overlap
         Object.values(this.music).forEach(track => {
@@ -85,6 +130,9 @@ const Audio = {
         this.volume = Math.max(0, Math.min(1, vol));
         for (const name in this.sounds) {
             this.sounds[name].volume = this.volume;
+        }
+        for (const name in this.voices) {
+            this.voices[name].volume = this.volume;
         }
     },
 
@@ -100,9 +148,10 @@ const Audio = {
 
         if (!this.enabled) {
             this.stopMusic();
+            this.stopVoice();
         } else if (this.currentMusic) {
-            // Resume music if it was tracked (though stopMusic nulls it, 
-            // so we'd need to remember what was playing. For now, simple toggle.)
+            // Resume music if it was tracked
+            this.playMusic(this.currentMusic);
         }
 
         return this.enabled;

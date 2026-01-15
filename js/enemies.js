@@ -101,6 +101,14 @@ class Enemy {
         this.health -= amount;
         this.flashTimer = 100;
 
+        const isCrit = amount > 15;
+        Game.addFloatingText(
+            this.x + this.width / 2,
+            this.y,
+            Math.round(amount).toString(),
+            isCrit ? '#ffff00' : '#ffffff'
+        );
+
         if (this.health <= 0) {
             this.active = false;
             return true; // Enemy died

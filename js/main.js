@@ -12,6 +12,9 @@ const Game = {
     coinManager: null,
     waveManager: null,
     background: null,
+    waveManager: null,
+    background: null,
+    particleManager: null,
     boss: null,
 
     lastTime: 0,
@@ -20,7 +23,9 @@ const Game = {
     gameOver: false,
     chapterComplete: false,
     inShop: false,
+    inShop: false,
     inIntro: false,
+    waitingForInput: true, // New state for audio policy
 
     currentChapter: 1,
     chapterNames: [
@@ -46,6 +51,13 @@ const Game = {
     // Pause cooldown
     pauseCooldown: 0,
 
+    // Victory/Collection Timer
+    victoryTimer: 0,
+
+    // Screen Shake
+    shakeTimer: 0,
+    shakeIntensity: 0,
+
     init() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
@@ -65,6 +77,8 @@ const Game = {
         this.powerupManager = new PowerupManager();
         this.coinManager = new CoinManager();
         this.waveManager = new WaveManager();
+        this.particleManager = new ParticleManager();
+        this.floatingTextManager = new FloatingTextManager();
 
         // Create background for current chapter
         this.background = Backgrounds.create(this.currentChapter);
@@ -78,6 +92,17 @@ const Game = {
         // Set chapter
         UI.setChapter(this.currentChapter, this.chapterNames[this.currentChapter]);
 
+        // Start game loop
+        this.running = true;
+        this.lastTime = performance.now();
+        requestAnimationFrame((t) => this.loop(t));
+
+        console.log('🚀 The Chrono-Splinter initialized!');
+    },
+
+    startGame() {
+        this.waitingForInput = false;
+
         // Start Intro Music
         Audio.playMusic('intro');
         this.inIntro = true;
@@ -87,13 +112,6 @@ const Game = {
             this.inIntro = false;
             this.beginChapter();
         });
-
-        // Start game loop
-        this.running = true;
-        this.lastTime = performance.now();
-        requestAnimationFrame((t) => this.loop(t));
-
-        console.log('🚀 The Chrono-Splinter initialized!');
     },
 
     loop(currentTime) {
@@ -105,8 +123,26 @@ const Game = {
         // Handle Pause Input
         if (this.pauseCooldown > 0) this.pauseCooldown -= deltaTime;
 
+        // Force user input for audio context
+        if (this.waitingForInput) {
+            if (Input.isPressed('Space') || Input.isPressed('Enter') || (Input.gamepad && Input.isGamepadButtonPressed(9)) || Input.touch.active) {
+                this.startGame();
+            }
+            this.draw();
+            requestAnimationFrame((t) => this.loop(t));
+            return;
+        }
+
         // Escape or Gamepad Start (9)
         Input.updateGamepad(); // Ensure fresh state
+
+        // Special Modes Input Handling (Game Over / Chapter Complete)
+        if (this.gameOver || this.chapterComplete) {
+            this.handleSpecialInput(deltaTime);
+            this.draw();
+            requestAnimationFrame((t) => this.loop(t));
+            return;
+        }
 
         let shouldTogglePause = false;
         let shouldToggleMap = false;
@@ -116,7 +152,7 @@ const Game = {
             if (Input.isPressed('Escape') || (Input.gamepad && Input.isGamepadButtonPressed(9))) {
                 shouldTogglePause = true;
             }
-            if (Input.isPressed('KeyM')) {
+            if (Input.isPressed('KeyM') || (Input.gamepad && Input.isGamepadButtonPressed(8))) {
                 shouldToggleMap = true;
             }
 
@@ -178,7 +214,7 @@ const Game = {
             Shop.update(deltaTime);
         }
         // Main Game Update
-        else if (!Settings.active && !GameMap.active && !this.gameOver && !this.chapterComplete) {
+        else if (!Settings.active && !GameMap.active) {
             this.update(deltaTime);
         }
 
@@ -190,9 +226,20 @@ const Game = {
     update(deltaTime) {
         // Update background
         this.background.update(deltaTime);
+        this.particleManager.update(deltaTime);
+
+        // Update Screen Shake
+        if (this.shakeTimer > 0) {
+            this.shakeTimer -= deltaTime;
+            if (this.shakeTimer <= 0) {
+                this.shakeIntensity = 0;
+            }
+        }
+
+        this.floatingTextManager.update(deltaTime);
 
         // Update player
-        this.player.update(deltaTime);
+        this.player.update(deltaTime, this.particleManager, this.enemyManager, this.bulletManager);
 
         // Handle firing
         if (Input.isFiring()) {
@@ -267,10 +314,13 @@ const Game = {
             this.boss.update(deltaTime, this.player, this.bulletManager);
 
             // Check boss collision with player bullets
+            // Check boss collision with player bullets
             for (const bullet of this.bulletManager.playerBullets) {
                 if (!this.boss) break; // Boss was defeated, exit loop
-                if (Utils.rectCollision(bullet, this.boss)) {
+                // Bosses have large sprites, use forgiving circle collision
+                if (Utils.circleCollision(bullet, this.boss, 0.5, 0.4)) {
                     const killed = this.boss.takeDamage(bullet.damage);
+                    this.particleManager.spawnImpact(bullet.x, bullet.y, '#fff', bullet.angle + Math.PI);
                     bullet.onHit();
 
                     if (killed) {
@@ -287,7 +337,8 @@ const Game = {
             this.bulletManager,
             this.enemyManager,
             this.powerupManager,
-            this.coinManager
+            this.coinManager,
+            this.particleManager
         );
 
         // Notify wave manager of enemy kills
@@ -304,6 +355,13 @@ const Game = {
         // Wave message timer
         if (this.waveMessageTimer > 0) {
             this.waveMessageTimer -= deltaTime;
+        }
+
+        if (this.victoryTimer > 0) {
+            this.victoryTimer -= deltaTime;
+            if (this.victoryTimer <= 0) {
+                this.completeChapterPhase();
+            }
         }
 
         // Update UI
@@ -336,20 +394,55 @@ const Game = {
         }
 
         Audio.play('explosion');
+        // Massive explosion for boss
+        this.particleManager.spawnExplosion(this.boss.x + this.boss.width / 2, this.boss.y + this.boss.height / 2, this.boss.color || '#ff0000', 50);
+
         // Play victory/calm music (or just stop boss music)
         Audio.playMusic('intro');
-        this.boss = null;
-        this.chapterComplete = true;
-        this.waveManager.waveComplete = true;
 
-        // Listen for continue to shop
-        const continueHandler = (e) => {
-            if (e.code === 'Enter') {
-                window.removeEventListener('keydown', continueHandler);
+        // Start collection phase (4 seconds)
+        this.boss = null;
+        this.victoryTimer = 4000;
+        this.waveManager.waveComplete = true;
+    },
+
+    handleSpecialInput(deltaTime) {
+        // Cooldown for inputs
+        if (this.inputCooldown > 0) {
+            this.inputCooldown -= deltaTime;
+            return;
+        }
+
+        // Check Confirm Input (Enter, Gamepad A/Start, Touch)
+        if (this.checkConfirmInput()) {
+            if (this.gameOver) {
+                this.restart();
+            } else if (this.chapterComplete) {
                 this.openShop();
             }
-        };
-        window.addEventListener('keydown', continueHandler);
+        }
+    },
+
+    checkConfirmInput() {
+        // Keyboard: Enter
+        if (Input.isPressed('Enter')) return true;
+
+        // Gamepad: A (0) or Start (9)
+        if (Input.gamepad) {
+            if (Input.isGamepadButtonPressed(0)) return true;
+            if (Input.isGamepadButtonPressed(9)) return true;
+        }
+
+        // Touch: Tap (Anywhere)
+        // We'll use a simple check for active touch, assuming cooldown prevents instant skipping
+        if (Input.touch.active) return true;
+
+        return false;
+    },
+
+    completeChapterPhase() {
+        this.chapterComplete = true;
+        this.inputCooldown = 1500; // Delay before accepting input to avoid accidental skips
     },
 
     openShop() {
@@ -397,6 +490,7 @@ const Game = {
         this.enemyManager.clear();
         this.powerupManager.clear();
         this.coinManager.clear();
+        this.floatingTextManager.clear();
         this.waveManager = new WaveManager(this.currentChapter);
         this.background = Backgrounds.create(this.currentChapter);
 
@@ -425,8 +519,20 @@ const Game = {
     draw() {
         const ctx = this.ctx;
 
+        // Apply Screen Shake
+        let shakeX = 0;
+        let shakeY = 0;
+        if (this.shakeTimer > 0) {
+            shakeX = (Math.random() - 0.5) * this.shakeIntensity;
+            shakeY = (Math.random() - 0.5) * this.shakeIntensity;
+        }
+
+        ctx.save();
+        ctx.translate(shakeX, shakeY);
+
         // Draw background
         this.background.draw(ctx);
+        this.particleManager.draw(ctx);
 
         // Draw game objects
         this.coinManager.draw(ctx);
@@ -435,10 +541,17 @@ const Game = {
         this.bulletManager.draw(ctx);
         this.player.draw(ctx);
 
-        // Draw boss
         if (this.boss) {
             this.boss.draw(ctx);
         }
+
+        this.floatingTextManager.draw(ctx);
+
+        ctx.restore(); // END SCREEN SHAKE
+
+        // UI Layer
+        // Score/Lives are HTML overlay, handled by UI.update
+        // Only draw Canvas UI elements here
 
         // Draw wave indicator
         if (this.waveManager) {
@@ -489,6 +602,21 @@ const Game = {
         if (GameMap.active) {
             GameMap.draw(ctx);
         }
+
+        // Click to Start Overlay
+        if (this.waitingForInput) {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillRect(0, 0, GAME.WIDTH, GAME.HEIGHT);
+
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 32px "Courier New"';
+            ctx.textAlign = 'center';
+            ctx.fillText('CLICK OR PRESS KEY TO START', GAME.WIDTH / 2, GAME.HEIGHT / 2);
+
+            ctx.font = '16px "Courier New"';
+            ctx.fillStyle = '#888';
+            ctx.fillText('(Required for Audio)', GAME.WIDTH / 2, GAME.HEIGHT / 2 + 40);
+        }
     },
 
     drawWaveMessage(ctx) {
@@ -514,7 +642,12 @@ const Game = {
         ctx.fillStyle = COLORS.PRIMARY;
         ctx.font = '24px "Courier New"';
         ctx.fillText(`Score: ${this.player.score}`, GAME.WIDTH / 2, GAME.HEIGHT / 2 + 20);
-        ctx.fillText('Press ENTER to restart', GAME.WIDTH / 2, GAME.HEIGHT / 2 + 60);
+
+        // Pulsing text
+        const alpha = 0.5 + Math.sin(Date.now() / 400) * 0.5;
+        ctx.globalAlpha = alpha;
+        ctx.fillText('Press ENTER or Tap to restart', GAME.WIDTH / 2, GAME.HEIGHT / 2 + 60);
+        ctx.globalAlpha = 1.0;
     },
 
     drawChapterComplete(ctx) {
@@ -545,22 +678,18 @@ const Game = {
         ctx.fillText(`Coins: ${this.player.coins}`, GAME.WIDTH / 2, GAME.HEIGHT / 2 + 60);
 
         ctx.fillStyle = COLORS.PRIMARY;
+        // Pulsing text
+        const alpha = 0.5 + Math.sin(Date.now() / 400) * 0.5;
+        ctx.globalAlpha = alpha;
         ctx.fillText('Press ENTER for Upgrade Shop', GAME.WIDTH / 2, GAME.HEIGHT / 2 + 110);
+        ctx.globalAlpha = 1.0;
     },
 
     handleGameOver() {
         this.gameOver = true;
+        this.inputCooldown = 1000; // prevent instant restart
         // Play game over sound (music continues)
         Audio.play('gameover');
-
-        // Listen for restart
-        const restartHandler = (e) => {
-            if (e.code === 'Enter') {
-                window.removeEventListener('keydown', restartHandler);
-                this.restart();
-            }
-        };
-        window.addEventListener('keydown', restartHandler);
     },
 
     restart() {
@@ -576,6 +705,7 @@ const Game = {
         this.enemyManager.clear();
         this.powerupManager.clear();
         this.coinManager.clear();
+        this.floatingTextManager.clear();
         this.waveManager = new WaveManager();
         this.background = Backgrounds.create(this.currentChapter);
 
@@ -583,6 +713,21 @@ const Game = {
         this.waveMessage = this.waveManager.startWave(1, this.enemyManager);
         this.waveMessageTimer = 2000;
     },
+
+    toggleDebug() {
+        this.debugMode = !this.debugMode;
+    },
+
+    triggerShake(intensity, duration) {
+        this.shakeIntensity = intensity;
+        this.shakeTimer = duration;
+    },
+
+    addFloatingText(x, y, text, color) {
+        if (this.floatingTextManager) {
+            this.floatingTextManager.spawn(x, y, text, color);
+        }
+    }
 };
 
 // Start the game when page loads
