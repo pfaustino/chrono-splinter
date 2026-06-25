@@ -198,6 +198,14 @@ body {
 
 
 
+#hud-left, #hud-right {
+
+    flex-shrink: 0;
+
+}
+
+
+
 #hud-center {
 
     flex: 1;
@@ -205,6 +213,8 @@ body {
     min-width: 0;
 
     justify-content: center;
+
+    overflow: hidden;
 
 }
 
@@ -234,6 +244,8 @@ body {
 
 #chapter-label {
 
+    display: block;
+
     color: var(--color-secondary);
 
     text-transform: uppercase;
@@ -241,6 +253,8 @@ body {
     letter-spacing: 1px;
 
     font-weight: bold;
+
+    line-height: 1.1;
 
     overflow: hidden;
 
@@ -516,19 +530,77 @@ body {
 
     #hud {
 
-        font-size: 11px;
+        display: grid;
 
-        height: 36px;
+        grid-template-areas:
+
+            "left right"
+
+            "center center";
+
+        grid-template-columns: 1fr auto;
+
+        grid-template-rows: auto auto;
+
+        align-items: center;
+
+        column-gap: 8px;
+
+        row-gap: 2px;
+
+        height: auto;
+
+        min-height: 36px;
+
+        font-size: 11px;
 
         padding:
 
-            env(safe-area-inset-top, 0)
+            max(4px, env(safe-area-inset-top, 0))
 
             max(8px, env(safe-area-inset-right, 0))
 
-            0
+            4px
 
             max(8px, env(safe-area-inset-left, 0));
+
+    }
+
+
+
+    #hud-left {
+
+        grid-area: left;
+
+    }
+
+
+
+    #hud-center {
+
+        grid-area: center;
+
+        width: 100%;
+
+        justify-content: center;
+
+    }
+
+
+
+    #hud-right {
+
+        grid-area: right;
+
+        justify-self: end;
+
+    }
+
+
+
+    #score-label {
+
+        display: none;
 
     }
 
@@ -550,9 +622,15 @@ body {
 
     #chapter-label {
 
-        font-size: 10px;
+        font-size: 9px;
 
         letter-spacing: 0;
+
+        line-height: 1.1;
+
+        text-align: center;
+
+        width: 100%;
 
     }
 

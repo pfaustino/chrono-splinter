@@ -8,6 +8,8 @@ const UI = {
     livesEl: null,
     chapterEl: null,
     weaponSlots: [],
+    _chapterNum: 1,
+    _chapterName: 'Mercury',
 
     init() {
         this.scoreEl = document.getElementById('score');
@@ -18,6 +20,8 @@ const UI = {
             document.getElementById('weapon-slot-1'),
             document.getElementById('weapon-slot-2'),
         ];
+
+        window.addEventListener('resize', () => this.applyChapterLabel());
 
         // Hide UI by default (Title Screen)
         this.hideGameplayUI();
@@ -73,7 +77,20 @@ const UI = {
     },
 
     setChapter(num, name) {
-        this.chapterEl.textContent = `CHAPTER ${num}: ${name.toUpperCase()}`;
+        this._chapterNum = num;
+        this._chapterName = name;
+        this.applyChapterLabel();
+    },
+
+    applyChapterLabel() {
+        if (!this.chapterEl) return;
+
+        const compact = window.matchMedia('(max-width: 900px), (max-height: 700px)').matches;
+        const name = this._chapterName.toUpperCase();
+        const text = compact
+            ? `CH ${this._chapterNum} · ${name}`
+            : `CHAPTER ${this._chapterNum}: ${name}`;
+        this.chapterEl.textContent = text;
     },
 
     /**

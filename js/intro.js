@@ -324,44 +324,68 @@ const ChapterIntro = {
         if (this.phase === 'crawl' || this.phase === 'titleReveal') {
             ctx.globalAlpha = 0.4 + Math.sin(Date.now() / 500) * 0.2;
             ctx.fillStyle = '#666';
-            ctx.font = '12px "Courier New"';
-            ctx.textAlign = 'center';
-            ctx.fillText('PRESS SPACE TO SKIP', GAME.WIDTH / 2, GAME.HEIGHT - 20);
+            const skipPrompt = Utils.isCompactView() ? 'Tap to skip' : 'PRESS SPACE TO SKIP';
+            Utils.drawFitCenterText(
+                ctx,
+                skipPrompt,
+                GAME.HEIGHT - 20,
+                12,
+                10,
+                '{size}px "Courier New"'
+            );
             ctx.globalAlpha = 1;
         }
     },
 
     drawPreText(ctx) {
-        // "A long time ago..." style text
         ctx.globalAlpha = this.preTextAlpha;
-        ctx.fillStyle = '#4169E1';  // Classic blue
-        ctx.font = 'italic 20px "Georgia", serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(this.preText, GAME.WIDTH / 2, GAME.HEIGHT / 2);
+        ctx.fillStyle = '#4169E1';
+        Utils.drawFitCenterWrapped(
+            ctx,
+            this.preText,
+            GAME.HEIGHT / 2,
+            24,
+            20,
+            14,
+            'italic {size}px "Georgia", serif'
+        );
         ctx.globalAlpha = 1;
     },
 
     drawTitleReveal(ctx) {
         ctx.save();
-        ctx.translate(GAME.WIDTH / 2, GAME.HEIGHT / 2);
+        ctx.translate(Utils.getSafeCenterX(), GAME.HEIGHT / 2);
 
-        // Scale effect (starts big, shrinks to normal)
-        const scale = 3 - (this.titleScale * 2);  // 3 -> 1
+        const scale = 3 - (this.titleScale * 2);
         ctx.scale(scale, scale);
-
-        // Fade in as it scales
         ctx.globalAlpha = this.titleScale;
 
-        // Chapter title
-        ctx.fillStyle = COLORS.PRIMARY;
-        ctx.font = 'bold 36px "Courier New"';
-        ctx.textAlign = 'center';
-        ctx.fillText(this.title, 0, -20);
+        const compact = Utils.isCompactView();
+        const localSafeW = Utils.getSafeWidth() / Math.max(scale, 1);
 
-        // Subtitle
+        ctx.fillStyle = COLORS.PRIMARY;
+        Utils.drawFitCenterText(
+            ctx,
+            this.title,
+            -20,
+            compact ? 28 : 36,
+            16,
+            'bold {size}px "Courier New"',
+            0,
+            localSafeW
+        );
+
         ctx.fillStyle = COLORS.SECONDARY;
-        ctx.font = 'bold 18px "Courier New"';
-        ctx.fillText(this.subtitle, 0, 20);
+        Utils.drawFitCenterText(
+            ctx,
+            this.subtitle,
+            20,
+            compact ? 14 : 18,
+            11,
+            'bold {size}px "Courier New"',
+            0,
+            localSafeW
+        );
 
         ctx.restore();
     },
@@ -377,16 +401,12 @@ const ChapterIntro = {
         const titleY = Math.min(80, 80 - (this.timing.titleReveal - this.scrollY) * 0.1);
         if (this.scrollY > GAME.HEIGHT - 200) {
             ctx.fillStyle = COLORS.PRIMARY;
-            ctx.font = 'bold 32px "Courier New"';
-            ctx.textAlign = 'center';
-
             const titleAlpha = Math.min(1, (this.scrollY - (GAME.HEIGHT - 200)) / 100);
             ctx.globalAlpha = titleAlpha;
-            ctx.fillText(this.title, 0, 60);
+            Utils.drawFitCenterText(ctx, this.title, 60, 32, 16, 'bold {size}px "Courier New"', 0);
 
             ctx.fillStyle = COLORS.SECONDARY;
-            ctx.font = 'bold 18px "Courier New"';
-            ctx.fillText(this.subtitle, 0, 90);
+            Utils.drawFitCenterText(ctx, this.subtitle, 90, 18, 12, 'bold {size}px "Courier New"', 0);
             ctx.globalAlpha = 1;
         }
 

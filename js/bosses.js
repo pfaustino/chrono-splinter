@@ -63,43 +63,61 @@ class Boss {
         // Override in subclass
     }
 
-    drawHealthBar(ctx) {
-        const barWidth = 300;
-        const barHeight = 20;
-        const x = GAME.WIDTH / 2 - barWidth / 2;
-        const y = GAME.HEIGHT - 50;
+    drawHealthBar(ctx, phaseLabel) {
+        const safe = Utils.getViewSafe();
+        const compact = Utils.isCompactView();
+        const barWidth = Math.min(300, safe.contentWidth * 0.92);
+        const barHeight = compact ? 14 : 20;
+        const x = safe.centerX - barWidth / 2;
+        const barY = safe.bottom - (compact ? 24 : 38);
 
-        // Background
         ctx.fillStyle = '#1a1a2e';
-        ctx.fillRect(x - 2, y - 2, barWidth + 4, barHeight + 4);
+        ctx.fillRect(x - 2, barY - 2, barWidth + 4, barHeight + 4);
 
-        // Health
         const healthPercent = Math.max(0, this.health / this.maxHealth);
         const healthColor = this.phase === 3 ? '#ff4757' :
             this.phase === 2 ? '#ffa502' : '#ff6b35';
         ctx.fillStyle = healthColor;
-        ctx.fillRect(x, y, barWidth * healthPercent, barHeight);
+        ctx.fillRect(x, barY, barWidth * healthPercent, barHeight);
 
-        // Phase markers
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = 2;
         for (let i = 1; i < this.maxPhase; i++) {
             const markerX = x + (barWidth / this.maxPhase) * i;
             ctx.beginPath();
-            ctx.moveTo(markerX, y);
-            ctx.lineTo(markerX, y + barHeight);
+            ctx.moveTo(markerX, barY);
+            ctx.lineTo(markerX, barY + barHeight);
             ctx.stroke();
         }
 
-        // Border
         ctx.strokeStyle = COLORS.PRIMARY;
-        ctx.strokeRect(x - 2, y - 2, barWidth + 4, barHeight + 4);
+        ctx.strokeRect(x - 2, barY - 2, barWidth + 4, barHeight + 4);
 
-        // Boss name
+        if (phaseLabel) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            Utils.drawFitCenterText(
+                ctx,
+                phaseLabel.toUpperCase(),
+                barY - (compact ? 12 : 14),
+                compact ? 11 : 12,
+                8,
+                '{size}px "Courier New"',
+                safe.centerX,
+                barWidth
+            );
+        }
+
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 14px "Courier New"';
-        ctx.textAlign = 'center';
-        ctx.fillText(this.name.toUpperCase(), GAME.WIDTH / 2, y - 10);
+        Utils.drawFitCenterText(
+            ctx,
+            this.name.toUpperCase(),
+            barY - (phaseLabel ? (compact ? 26 : 30) : (compact ? 12 : 14)),
+            compact ? 12 : 14,
+            9,
+            'bold {size}px "Courier New"',
+            safe.centerX,
+            barWidth
+        );
     }
 }
 
@@ -323,15 +341,9 @@ class Sunkeeper extends Boss {
         ctx.globalAlpha = 1;
 
         // Health bar
-        this.drawHealthBar(ctx);
-
-        // Phase indicator
-        ctx.fillStyle = '#fff';
-        ctx.font = '12px "Courier New"';
-        ctx.textAlign = 'center';
         const phaseText = this.phase === 3 ? 'SOLAR SHIELD' :
             this.phase === 2 ? 'FLARE BARRAGE' : 'MELTDOWN';
-        ctx.fillText(phaseText, GAME.WIDTH / 2, GAME.HEIGHT - 60);
+        this.drawHealthBar(ctx, phaseText);
     }
 }
 
@@ -503,15 +515,9 @@ class Stormweaver extends Boss {
         ctx.globalAlpha = 1;
 
         // Health bar
-        this.drawHealthBar(ctx);
-
-        // Phase indicator
-        ctx.fillStyle = '#fff';
-        ctx.font = '12px "Courier New"';
-        ctx.textAlign = 'center';
         const phaseText = this.phase === 3 ? 'STORM GATHERING' :
             this.phase === 2 ? 'LIGHTNING STORM' : 'FURY OF VENUS';
-        ctx.fillText(phaseText, GAME.WIDTH / 2, GAME.HEIGHT - 60);
+        this.drawHealthBar(ctx, phaseText);
     }
 }
 
@@ -828,15 +834,9 @@ class ChronoWeaver extends Boss {
         ctx.globalAlpha = 1;
 
         // Health bar
-        this.drawHealthBar(ctx);
-
-        // Phase indicator
-        ctx.fillStyle = '#fff';
-        ctx.font = '12px "Courier New"';
-        ctx.textAlign = 'center';
         const phaseText = this.phase === 3 ? 'TEMPORAL NEXUS' :
             this.phase === 2 ? 'TIME DILATION' : 'REALITY COLLAPSE';
-        ctx.fillText(phaseText, GAME.WIDTH / 2, GAME.HEIGHT - 60);
+        this.drawHealthBar(ctx, phaseText);
     }
 }
 
@@ -983,13 +983,7 @@ class ProceduralBoss extends Boss {
         ctx.fillRect(cx + 5, cy - 10, 10, 10);
 
         ctx.globalAlpha = 1;
-        this.drawHealthBar(ctx);
-
-        // Phase text fallback
-        ctx.fillStyle = '#fff';
-        ctx.font = '12px "Courier New"';
-        ctx.textAlign = 'center';
-        ctx.fillText(`PHASE ${4 - this.phase}`, GAME.WIDTH / 2, GAME.HEIGHT - 60);
+        this.drawHealthBar(ctx, `PHASE ${4 - this.phase}`);
     }
 }
 

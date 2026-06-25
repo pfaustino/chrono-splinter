@@ -58,6 +58,8 @@ const Game = {
     shakeTimer: 0,
     shakeIntensity: 0,
 
+    viewSafe: null,
+
     init() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
@@ -157,6 +159,7 @@ const Game = {
             container.style.height = `${Math.floor(gameH)}px`;
             canvas.style.width = '100%';
             canvas.style.height = '100%';
+            this.updateViewSafe(0, 0);
             return;
         }
 
@@ -172,11 +175,22 @@ const Game = {
 
         const containerW = container.clientWidth;
         const containerH = container.clientHeight;
-        if (containerW <= 0 || containerH <= 0) return;
+        if (containerW <= 0 || containerH <= 0) {
+            this.updateViewSafe(120, 40);
+            return;
+        }
 
         const scale = Math.max(containerW / GAME.WIDTH, containerH / GAME.HEIGHT);
         canvas.style.width = `${Math.floor(GAME.WIDTH * scale)}px`;
         canvas.style.height = `${Math.floor(GAME.HEIGHT * scale)}px`;
+
+        const cropX = Math.max(0, (GAME.WIDTH * scale - containerW) / 2 / scale);
+        const cropY = Math.max(0, (GAME.HEIGHT * scale - containerH) / 2 / scale);
+        this.updateViewSafe(cropX, cropY);
+    },
+
+    updateViewSafe(cropX, cropY) {
+        this.viewSafe = Utils._buildViewSafe(cropX, cropY, 20);
     },
 
     bindStartOverlay() {
@@ -703,9 +717,15 @@ const Game = {
         ctx.save();
         ctx.globalAlpha = alpha;
         ctx.fillStyle = COLORS.WARNING;
-        ctx.font = 'bold 28px "Courier New"';
-        ctx.textAlign = 'center';
-        ctx.fillText(this.waveMessage, GAME.WIDTH / 2, GAME.HEIGHT / 2 - 100);
+        Utils.drawFitCenterWrapped(
+            ctx,
+            this.waveMessage,
+            GAME.HEIGHT / 2 - 110,
+            26,
+            28,
+            14,
+            'bold {size}px "Courier New"'
+        );
         ctx.restore();
     },
 
@@ -714,18 +734,23 @@ const Game = {
         ctx.fillRect(0, 0, GAME.WIDTH, GAME.HEIGHT);
 
         ctx.fillStyle = COLORS.HEALTH;
-        ctx.font = 'bold 48px "Courier New"';
-        ctx.textAlign = 'center';
-        ctx.fillText('GAME OVER', GAME.WIDTH / 2, GAME.HEIGHT / 2 - 30);
+        Utils.drawFitCenterText(ctx, 'GAME OVER', GAME.HEIGHT / 2 - 40, 48, 24, 'bold {size}px "Courier New"');
 
         ctx.fillStyle = COLORS.PRIMARY;
-        ctx.font = '24px "Courier New"';
-        ctx.fillText(`Score: ${this.player.score}`, GAME.WIDTH / 2, GAME.HEIGHT / 2 + 20);
+        Utils.drawFitCenterText(
+            ctx,
+            `Score: ${this.player.score}`,
+            GAME.HEIGHT / 2 + 10,
+            24,
+            14,
+            '{size}px "Courier New"'
+        );
 
-        // Pulsing text
         const alpha = 0.5 + Math.sin(Date.now() / 400) * 0.5;
         ctx.globalAlpha = alpha;
-        ctx.fillText('Press ENTER or Tap to restart', GAME.WIDTH / 2, GAME.HEIGHT / 2 + 60);
+        ctx.fillStyle = COLORS.PRIMARY;
+        const restartPrompt = Utils.isCompactView() ? 'Tap to restart' : 'Press ENTER or Tap to restart';
+        Utils.drawFitCenterText(ctx, restartPrompt, GAME.HEIGHT / 2 + 50, 20, 12, '{size}px "Courier New"');
         ctx.globalAlpha = 1.0;
     },
 
@@ -733,12 +758,22 @@ const Game = {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.fillRect(0, 0, GAME.WIDTH, GAME.HEIGHT);
 
-        ctx.fillStyle = COLORS.PRIMARY;
-        ctx.font = 'bold 36px "Courier New"';
-        ctx.textAlign = 'center';
-        ctx.fillText('CHAPTER COMPLETE!', GAME.WIDTH / 2, GAME.HEIGHT / 2 - 60);
+        const cx = Utils.getSafeCenterX();
+        const compact = Utils.isCompactView();
+        let y = GAME.HEIGHT / 2 - (compact ? 80 : 60);
 
-        // Dynamic boss name
+        ctx.fillStyle = COLORS.PRIMARY;
+        Utils.drawFitCenterText(
+            ctx,
+            compact ? 'CHAPTER COMPLETE' : 'CHAPTER COMPLETE!',
+            y,
+            compact ? 28 : 36,
+            16,
+            'bold {size}px "Courier New"',
+            cx
+        );
+        y += compact ? 34 : 40;
+
         const bossNames = {
             1: 'THE SUNKEEPER', 2: 'THE STORMWEAVER', 3: 'THE CHRONO-WEAVER',
             4: 'THE ECHO', 5: 'THE WARDEN', 6: 'THE SIEGEBREAKER',
@@ -748,19 +783,38 @@ const Game = {
         const bossName = bossNames[this.currentChapter] || 'BOSS';
 
         ctx.fillStyle = COLORS.COINS;
-        ctx.font = 'bold 24px "Courier New"';
-        ctx.fillText(`${bossName} DEFEATED`, GAME.WIDTH / 2, GAME.HEIGHT / 2 - 20);
+        const bossLines = Utils.drawFitCenterWrapped(
+            ctx,
+            `${bossName} DEFEATED`,
+            y,
+            compact ? 22 : 26,
+            compact ? 20 : 24,
+            12,
+            'bold {size}px "Courier New"',
+            cx
+        );
+        y += bossLines.lineCount * (compact ? 22 : 26) + 12;
 
         ctx.fillStyle = '#fff';
-        ctx.font = '20px "Courier New"';
-        ctx.fillText(`Score: ${this.player.score}`, GAME.WIDTH / 2, GAME.HEIGHT / 2 + 30);
-        ctx.fillText(`Coins: ${this.player.coins}`, GAME.WIDTH / 2, GAME.HEIGHT / 2 + 60);
+        Utils.drawFitCenterText(ctx, `Score: ${this.player.score}`, y, 20, 14, '{size}px "Courier New"', cx);
+        y += compact ? 24 : 28;
+        Utils.drawFitCenterText(ctx, `Coins: ${this.player.coins}`, y, 20, 14, '{size}px "Courier New"', cx);
+        y += compact ? 28 : 36;
 
         ctx.fillStyle = COLORS.PRIMARY;
-        // Pulsing text
         const alpha = 0.5 + Math.sin(Date.now() / 400) * 0.5;
         ctx.globalAlpha = alpha;
-        ctx.fillText('Press ENTER for Upgrade Shop', GAME.WIDTH / 2, GAME.HEIGHT / 2 + 110);
+        const shopPrompt = compact ? 'Tap for Upgrade Shop' : 'Press ENTER for Upgrade Shop';
+        Utils.drawFitCenterWrapped(
+            ctx,
+            shopPrompt,
+            y,
+            compact ? 18 : 22,
+            compact ? 16 : 20,
+            11,
+            '{size}px "Courier New"',
+            cx
+        );
         ctx.globalAlpha = 1.0;
     },
 

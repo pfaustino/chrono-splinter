@@ -24,8 +24,11 @@ const Shop = {
         this.player = player;
         this.onClose = onClose;
         this.selectedIndex = 0;
-        this.selectedIndex = 0;
         this.inputCooldown = 0;
+
+        if (typeof Game !== 'undefined' && Game.resizeDisplay) {
+            Game.resizeDisplay();
+        }
 
         // Hide UI
         UI.hideGameplayUI();
@@ -132,23 +135,17 @@ const Shop = {
         const coords = Input.getCanvasCoords(clientX, clientY);
         const x = coords.x;
         const y = coords.y;
+        const layout = this.getLayout();
+        const { panelLeft, panelW, listTop, itemHeight, continueY, btnW, safe } = layout;
 
-        // Check UI bounds
-        const startY = 180;
-        const itemHeight = 80;
-
-        // Check upgrade items
         for (let i = 0; i < this.upgrades.length; i++) {
-            const itemY = startY + i * itemHeight;
-            // Hitbox for the row
-            if (x > GAME.WIDTH / 2 - 200 && x < GAME.WIDTH / 2 + 200 &&
-                y > itemY - 25 && y < itemY + 45) {
-
+            const rowY = listTop + i * itemHeight;
+            const rowH = itemHeight - 8;
+            if (x > panelLeft && x < panelLeft + panelW &&
+                y > rowY && y < rowY + rowH) {
                 if (this.selectedIndex === i) {
-                    // Already selected, try to buy
                     this.purchaseSelected();
                 } else {
-                    // Select it
                     this.selectedIndex = i;
                     Audio.play('laser');
                 }
@@ -156,8 +153,9 @@ const Shop = {
             }
         }
 
-        // Check Continue Button (bottom area)
-        if (y > GAME.HEIGHT - 80) {
+        const cx = safe.centerX;
+        if (x > cx - btnW / 2 && x < cx + btnW / 2 &&
+            y > continueY - 22 && y < continueY + (layout.compact ? 36 : 40)) {
             this.close();
         }
     },
@@ -201,91 +199,181 @@ const Shop = {
         }
     },
 
+    getLayout() {
+        const safe = Utils.getViewSafe();
+        const compact = Utils.isCompactView();
+        const panelW = safe.contentWidth;
+        const panelLeft = safe.left;
+        const innerPad = 12;
+        const continueBlockH = compact ? 58 : 52;
+        const continueY = safe.bottom - continueBlockH;
+        const btnW = Math.min(200, panelW * 0.9);
+
+        let y = safe.top + (compact ? 6 : 10);
+        y += compact ? 36 : 48;
+        y += compact ? 24 : 32;
+
+        const listTop = y;
+        const listBottom = continueY - (compact ? 12 : 16);
+        const itemHeight = Math.min(
+            compact ? 58 : 72,
+            Math.floor((listBottom - listTop) / this.upgrades.length)
+        );
+
+        return {
+            safe,
+            compact,
+            panelW,
+            panelLeft,
+            innerPad,
+            listTop,
+            itemHeight,
+            continueY,
+            btnW,
+        };
+    },
+
     draw(ctx) {
         if (!this.active) return;
 
-        // Darken background
+        const layout = this.getLayout();
+        const {
+            safe, compact, panelW, panelLeft, innerPad, listTop, itemHeight, continueY, btnW,
+        } = layout;
+        const cx = safe.centerX;
+        const textLeft = panelLeft + innerPad;
+        const textRight = safe.right - innerPad;
+        const innerW = textRight - textLeft;
+
         ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
         ctx.fillRect(0, 0, GAME.WIDTH, GAME.HEIGHT);
 
-        // Title
+        let y = safe.top + (compact ? 6 : 10);
+
         ctx.fillStyle = COLORS.PRIMARY;
-        ctx.font = 'bold 36px "Courier New"';
-        ctx.textAlign = 'center';
-        ctx.fillText('UPGRADE SHOP', GAME.WIDTH / 2, 80);
+        Utils.drawFitCenterText(
+            ctx,
+            'UPGRADE SHOP',
+            y + (compact ? 16 : 22),
+            compact ? 26 : 36,
+            14,
+            'bold {size}px "Courier New"',
+            cx,
+            panelW
+        );
+        y += compact ? 36 : 48;
 
-        // Coins display
         ctx.fillStyle = COLORS.COINS;
-        ctx.font = '24px "Courier New"';
-        ctx.fillText(`◆ ${this.player.coins} COINS`, GAME.WIDTH / 2, 120);
-
-        // Upgrade options
-        const startY = 180;
-        const itemHeight = 80;
+        Utils.drawFitCenterText(
+            ctx,
+            `◆ ${this.player.coins} COINS`,
+            y,
+            compact ? 16 : 24,
+            11,
+            '{size}px "Courier New"',
+            cx,
+            panelW
+        );
 
         for (let i = 0; i < this.upgrades.length; i++) {
             const upgrade = this.upgrades[i];
-            const y = startY + i * itemHeight;
+            const rowY = listTop + i * itemHeight;
             const level = this.player.upgrades[upgrade.stat];
             const cost = this.getCost(upgrade, this.player);
             const isSelected = i === this.selectedIndex;
             const canAfford = cost !== null && this.player.coins >= cost;
+            const rowH = itemHeight - 8;
 
-            // Selection box
             if (isSelected) {
                 ctx.strokeStyle = COLORS.PRIMARY;
                 ctx.lineWidth = 2;
-                ctx.strokeRect(GAME.WIDTH / 2 - 200, y - 25, 400, 70);
+                ctx.strokeRect(panelLeft, rowY, panelW, rowH);
             }
 
-            // Upgrade name
             ctx.fillStyle = isSelected ? COLORS.PRIMARY : '#aaa';
-            ctx.font = 'bold 20px "Courier New"';
-            ctx.textAlign = 'left';
-            ctx.fillText(upgrade.name, GAME.WIDTH / 2 - 180, y);
+            Utils.drawFitLeftText(
+                ctx,
+                upgrade.name,
+                textLeft,
+                rowY + (compact ? 14 : 16),
+                compact ? 16 : 20,
+                11,
+                'bold {size}px "Courier New"',
+                innerW * 0.55
+            );
 
-            // Level bar
+            const barW = Math.min(compact ? 90 : 120, innerW * 0.42);
+            const barY = rowY + (compact ? 22 : 26);
             ctx.fillStyle = '#333';
-            ctx.fillRect(GAME.WIDTH / 2 - 180, y + 10, 150, 15);
+            ctx.fillRect(textLeft, barY, barW, compact ? 10 : 12);
             ctx.fillStyle = COLORS.PRIMARY;
-            ctx.fillRect(GAME.WIDTH / 2 - 180, y + 10, (level / this.maxLevel) * 150, 15);
+            ctx.fillRect(textLeft, barY, (level / this.maxLevel) * barW, compact ? 10 : 12);
 
-            // Level text
             ctx.fillStyle = '#fff';
-            ctx.font = '14px "Courier New"';
-            ctx.fillText(`LV ${level}/${this.maxLevel}`, GAME.WIDTH / 2 - 20, y + 22);
+            Utils.drawFitLeftText(
+                ctx,
+                `LV ${level}/${this.maxLevel}`,
+                textLeft + barW + 6,
+                barY + (compact ? 9 : 10),
+                compact ? 11 : 14,
+                9,
+                '{size}px "Courier New"',
+                innerW * 0.25
+            );
 
-            // Cost or MAX
+            const costText = cost === null ? 'MAX' : `◆ ${cost}`;
+            ctx.fillStyle = cost === null ? '#888' : (canAfford ? COLORS.COINS : '#666');
+            const costSize = Utils.fitFontSize(
+                ctx,
+                costText,
+                compact ? 14 : 16,
+                10,
+                'bold {size}px "Courier New"',
+                innerW * 0.22
+            );
+            ctx.font = Utils._font('bold {size}px "Courier New"', costSize);
             ctx.textAlign = 'right';
-            if (cost === null) {
-                ctx.fillStyle = '#888';
-                ctx.fillText('MAX', GAME.WIDTH / 2 + 180, y + 5);
-            } else {
-                ctx.fillStyle = canAfford ? COLORS.COINS : '#666';
-                ctx.fillText(`◆ ${cost}`, GAME.WIDTH / 2 + 180, y + 5);
-            }
+            ctx.fillText(costText, textRight, rowY + (compact ? 14 : 16));
 
-            // Description
             ctx.fillStyle = '#666';
-            ctx.font = '12px "Courier New"';
-            ctx.textAlign = 'left';
-            ctx.fillText(upgrade.desc, GAME.WIDTH / 2 - 180, y + 38);
+            Utils.drawFitLeftText(
+                ctx,
+                upgrade.desc,
+                textLeft,
+                rowY + (compact ? 38 : 46),
+                compact ? 10 : 12,
+                8,
+                '{size}px "Courier New"',
+                innerW
+            );
         }
 
-        // Instructions/Continue Button
-        const continueY = GAME.HEIGHT - 50;
-
-        // Draw Continue "Button" area for touch reference
         ctx.fillStyle = '#333';
-        ctx.fillRect(GAME.WIDTH / 2 - 100, continueY - 25, 200, 40);
+        ctx.fillRect(cx - btnW / 2, continueY - 22, btnW, compact ? 36 : 40);
 
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 20px "Courier New"';
-        ctx.textAlign = 'center';
-        ctx.fillText('CONTINUE', GAME.WIDTH / 2, continueY + 2);
+        Utils.drawFitCenterText(
+            ctx,
+            'CONTINUE',
+            continueY + (compact ? 0 : 2),
+            compact ? 16 : 20,
+            12,
+            'bold {size}px "Courier New"',
+            cx,
+            btnW
+        );
 
         ctx.fillStyle = '#666';
-        ctx.font = '12px "Courier New"';
-        ctx.fillText('PRESS C / START / TAP HERE', GAME.WIDTH / 2, continueY + 25);
+        const continuePrompt = compact ? 'Tap here to continue' : 'PRESS C / START / TAP HERE';
+        Utils.drawFitCenterText(
+            ctx,
+            continuePrompt,
+            continueY + (compact ? 22 : 25),
+            compact ? 10 : 12,
+            8,
+            '{size}px "Courier New"',
+            cx,
+            btnW
+        );
     }
 };

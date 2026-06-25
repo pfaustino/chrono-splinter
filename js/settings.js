@@ -59,12 +59,13 @@ const Settings = {
         this.active = true;
         this.onClose = onClose;
         this.selectedIndex = 0;
-        this.inputCooldown = 300; // Initial delay to prevent accidental inputs
+        this.inputCooldown = 300;
 
-        // Setup input handlers
+        if (typeof Game !== 'undefined' && Game.resizeDisplay) {
+            Game.resizeDisplay();
+        }
+
         this.setupTouch();
-
-        // Hide Game UI
         UI.hideGameplayUI();
     },
 
@@ -171,11 +172,141 @@ const Settings = {
         }
     },
 
+    getLayout() {
+        const safe = Utils.getViewSafe();
+        const compact = Utils.isCompactView();
+        const titleY = safe.top + (compact ? 32 : 48);
+        const startY = safe.top + (compact ? 72 : 100);
+        const itemHeight = compact ? 56 : 70;
+        const footerY = safe.bottom - (compact ? 14 : 24);
+
+        return {
+            safe,
+            compact,
+            cx: safe.centerX,
+            left: safe.left,
+            right: safe.right,
+            width: safe.contentWidth,
+            titleY,
+            startY,
+            itemHeight,
+            footerY,
+        };
+    },
+
+    drawOptionRow(ctx, option, index, layout) {
+        const { compact, cx, left, right, width, startY, itemHeight } = layout;
+        const y = startY + index * itemHeight;
+        const isSelected = index === this.selectedIndex;
+        const labelSize = compact ? 14 : 18;
+        const ctrlSize = compact ? 13 : 16;
+
+        if (option.type === 'slider' || option.type === 'selector') {
+            const labelY = compact ? y - 4 : y;
+            const ctrlY = compact ? y + 16 : y;
+            const labelW = compact ? width : width * 0.42;
+            const ctrlW = compact ? width * 0.62 : width * 0.52;
+            const ctrlLeft = right - ctrlW;
+
+            ctx.fillStyle = isSelected ? '#fff' : '#888';
+            Utils.drawFitLeftText(
+                ctx,
+                option.name,
+                left,
+                labelY,
+                labelSize,
+                10,
+                isSelected ? 'bold {size}px "Courier New"' : '{size}px "Courier New"',
+                labelW
+            );
+
+            if (option.type === 'selector') {
+                const value = option.getValue();
+                ctx.fillStyle = isSelected ? COLORS.PRIMARY : '#ccc';
+                const valueSize = Utils.fitFontSize(
+                    ctx,
+                    value,
+                    ctrlSize,
+                    10,
+                    'bold {size}px "Courier New"',
+                    ctrlW * 0.45
+                );
+                ctx.font = Utils._font('bold {size}px "Courier New"', valueSize);
+
+                if (isSelected) {
+                    ctx.textAlign = 'left';
+                    ctx.fillStyle = COLORS.PRIMARY;
+                    ctx.fillText('<', ctrlLeft, ctrlY);
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = '#fff';
+                    ctx.fillText(value, ctrlLeft + ctrlW * 0.5, ctrlY);
+                    ctx.textAlign = 'right';
+                    ctx.fillStyle = COLORS.PRIMARY;
+                    ctx.fillText('>', right, ctrlY);
+                } else {
+                    ctx.textAlign = 'right';
+                    ctx.fillStyle = '#ccc';
+                    ctx.fillText(value, right, ctrlY);
+                }
+            } else {
+                const value = Math.round(option.getValue() * 10);
+                const dots = '▮'.repeat(value) + '▯'.repeat(10 - value);
+                ctx.fillStyle = isSelected ? '#fff' : '#888';
+
+                if (isSelected) {
+                    ctx.textAlign = 'left';
+                    ctx.fillStyle = COLORS.PRIMARY;
+                    ctx.fillText('<', ctrlLeft, ctrlY);
+                    Utils.drawFitCenterText(
+                        ctx,
+                        dots,
+                        ctrlY,
+                        ctrlSize,
+                        10,
+                        '{size}px "Courier New"',
+                        ctrlLeft + ctrlW * 0.5,
+                        ctrlW * 0.55
+                    );
+                    ctx.textAlign = 'right';
+                    ctx.fillStyle = COLORS.PRIMARY;
+                    ctx.fillText('>', right, ctrlY);
+                } else {
+                    ctx.textAlign = 'right';
+                    ctx.fillStyle = '#888';
+                    Utils.drawFitCenterText(
+                        ctx,
+                        dots,
+                        ctrlY,
+                        ctrlSize,
+                        10,
+                        '{size}px "Courier New"',
+                        right - ctrlW * 0.25,
+                        ctrlW * 0.5
+                    );
+                }
+            }
+            return { y, ctrlLeft, ctrlW, ctrlY };
+        }
+
+        const label = isSelected ? `> ${option.name} <` : option.name;
+        ctx.fillStyle = isSelected ? '#fff' : '#888';
+        Utils.drawFitCenterText(
+            ctx,
+            label,
+            y,
+            compact ? 18 : 24,
+            12,
+            isSelected ? 'bold {size}px "Courier New"' : '{size}px "Courier New"',
+            cx,
+            width
+        );
+        return { y, ctrlLeft: left, ctrlW: width, ctrlY: y };
+    },
+
     handleTouch(e) {
         if (!this.active) return;
         e.preventDefault();
 
-        // Get coordinates
         let clientX, clientY;
         if (e.type === 'touchstart') {
             clientX = e.touches[0].clientX;
@@ -188,55 +319,44 @@ const Settings = {
         const coords = Input.getCanvasCoords(clientX, clientY);
         const x = coords.x;
         const y = coords.y;
-
-        const startY = 180;
-        const itemHeight = 70;
+        const layout = this.getLayout();
 
         for (let i = 0; i < this.options.length; i++) {
-            const itemY = startY + i * itemHeight;
             const option = this.options[i];
+            const rowY = layout.startY + i * layout.itemHeight;
+            const rowTop = rowY - (layout.compact ? 18 : 24);
+            const rowBottom = rowY + (layout.compact ? 28 : 20);
 
-            // Check row bounds
-            if (y > itemY - 25 && y < itemY + 35) {
-                if (option.type === 'slider') {
-                    // Check left/right buttons for slider
-                    if (x > GAME.WIDTH / 2 + 60 && x < GAME.WIDTH / 2 + 100) {
-                        // Decrease (<)
-                        option.action(this, -1);
-                        this.selectedIndex = i;
-                    } else if (x > GAME.WIDTH / 2 + 200 && x < GAME.WIDTH / 2 + 240) {
-                        // Increase (>)
-                        option.action(this, 1);
-                        this.selectedIndex = i;
-                    }
-                } else if (option.type === 'selector') {
-                    // Check left/right buttons for selector (reuse slider zones roughly)
-                    if (x > GAME.WIDTH / 2 + 20 && x < GAME.WIDTH / 2 + 100) {
-                        // Decrease (<)
-                        option.action(this, -1);
-                        this.selectedIndex = i;
-                    } else if (x > GAME.WIDTH / 2 + 200 && x < GAME.WIDTH / 2 + 280) {
-                        // Increase (>)
-                        option.action(this, 1);
-                        this.selectedIndex = i;
-                    }
+            if (y < rowTop || y > rowBottom) continue;
+
+            if (option.type === 'slider' || option.type === 'selector') {
+                const ctrlW = layout.compact ? layout.width * 0.62 : layout.width * 0.52;
+                const ctrlLeft = layout.right - ctrlW;
+                const ctrlMid = ctrlLeft + ctrlW * 0.5;
+
+                if (x < ctrlMid) {
+                    option.action(this, -1);
+                    this.selectedIndex = i;
+                } else if (x > ctrlMid) {
+                    option.action(this, 1);
+                    this.selectedIndex = i;
                 } else {
-                    // Button click
-                    if (x > GAME.WIDTH / 2 - 150 && x < GAME.WIDTH / 2 + 150) {
-                        this.selectedIndex = i;
-                        option.action(this);
-                    }
+                    this.selectedIndex = i;
                 }
+                return;
             }
-        }
 
-        // Close if click outside (optional, maybe just keep forced interaction)
+            this.selectedIndex = i;
+            option.action(this);
+            return;
+        }
     },
 
     draw(ctx) {
         if (!this.active) return;
 
-        // Overlay
+        const layout = this.getLayout();
+
         ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
         ctx.fillRect(0, 0, GAME.WIDTH, GAME.HEIGHT);
 
@@ -244,67 +364,33 @@ const Settings = {
         ctx.shadowColor = COLORS.PRIMARY;
         ctx.shadowBlur = 10;
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 48px "Courier New"';
-        ctx.textAlign = 'center';
-        ctx.fillText('PAUSED', GAME.WIDTH / 2, 100);
+        Utils.drawFitCenterText(
+            ctx,
+            'PAUSED',
+            layout.titleY,
+            layout.compact ? 32 : 48,
+            20,
+            'bold {size}px "Courier New"',
+            layout.cx,
+            layout.width
+        );
         ctx.restore();
 
-        const startY = 180;
-        const itemHeight = 70;
-
         for (let i = 0; i < this.options.length; i++) {
-            const option = this.options[i];
-            const y = startY + i * itemHeight;
-            const isSelected = i === this.selectedIndex;
-
-            // Selection indicator
-            if (isSelected) {
-                ctx.fillStyle = COLORS.PRIMARY;
-                ctx.font = 'bold 24px "Courier New"';
-                ctx.fillText('> ', GAME.WIDTH / 2 - 160, y);
-                ctx.fillText(' <', GAME.WIDTH / 2 + 160, y);
-            }
-
-            ctx.fillStyle = isSelected ? '#fff' : '#888';
-            ctx.font = isSelected ? 'bold 24px "Courier New"' : '24px "Courier New"';
-            ctx.textAlign = 'center';
-
-            if (option.type === 'slider') {
-                ctx.fillText(option.name, GAME.WIDTH / 2 - 100, y);
-
-                // Draw sliders
-                const value = Math.round(option.getValue() * 10);
-                const dots = '▮'.repeat(value) + '▯'.repeat(10 - value);
-
-                // Draw buttons for touch
-                ctx.fillStyle = isSelected ? COLORS.PRIMARY : '#666';
-                ctx.fillText('<', GAME.WIDTH / 2 + 80, y);
-                ctx.fillText('>', GAME.WIDTH / 2 + 220, y);
-
-                ctx.fillStyle = isSelected ? '#fff' : '#888';
-                ctx.fillText(dots, GAME.WIDTH / 2 + 150, y);
-
-            } else if (option.type === 'selector') {
-                ctx.fillText(option.name, GAME.WIDTH / 2 - 100, y);
-
-                const value = option.getValue();
-                ctx.fillStyle = isSelected ? COLORS.PRIMARY : '#ccc';
-                ctx.fillText(value, GAME.WIDTH / 2 + 150, y);
-
-                if (isSelected) {
-                    ctx.fillStyle = COLORS.PRIMARY;
-                    ctx.fillText('<', GAME.WIDTH / 2 + 60, y);
-                    ctx.fillText('>', GAME.WIDTH / 2 + 240, y);
-                }
-            } else {
-                ctx.fillText(option.name, GAME.WIDTH / 2, y);
-            }
+            this.drawOptionRow(ctx, this.options[i], i, layout);
         }
 
-        // Instructions
         ctx.fillStyle = '#666';
-        ctx.font = '14px "Courier New"';
-        ctx.textAlign = 'center';
-        ctx.fillText('Use Arrows/Touch to Navigate', GAME.WIDTH / 2, GAME.HEIGHT - 40);
+        const footer = layout.compact ? 'Tap rows to change · arrows to move' : 'Use Arrows/Touch to Navigate';
+        Utils.drawFitCenterText(
+            ctx,
+            footer,
+            layout.footerY,
+            layout.compact ? 10 : 14,
+            8,
+            '{size}px "Courier New"',
+            layout.cx,
+            layout.width
+        );
     }
 };

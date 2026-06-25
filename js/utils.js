@@ -119,4 +119,145 @@ const Utils = {
             timeout = setTimeout(() => func.apply(this, args), wait);
         };
     },
+
+    isCompactView() {
+        const vw = window.visualViewport?.width ?? window.innerWidth;
+        const vh = window.visualViewport?.height ?? window.innerHeight;
+        return vw <= 900 || vh <= 700;
+    },
+
+    getViewSafe() {
+        if (typeof Game !== 'undefined' && Game.viewSafe) {
+            return Game.viewSafe;
+        }
+        return Utils.estimateViewSafe();
+    },
+
+    estimateViewSafe() {
+        const edgePad = 20;
+        const canvas = typeof Game !== 'undefined' ? Game.canvas : null;
+        const container = canvas?.parentElement;
+
+        if (!canvas || !container) {
+            const fallbackCropX = Utils.isCompactView() ? 200 : 0;
+            const fallbackCropY = Utils.isCompactView() ? 24 : 0;
+            return Utils._buildViewSafe(fallbackCropX, fallbackCropY, edgePad);
+        }
+
+        const containerW = container.clientWidth;
+        const containerH = container.clientHeight;
+        if (containerW <= 0 || containerH <= 0) {
+            const fallbackCropX = Utils.isCompactView() ? 200 : 0;
+            const fallbackCropY = Utils.isCompactView() ? 24 : 0;
+            return Utils._buildViewSafe(fallbackCropX, fallbackCropY, edgePad);
+        }
+
+        const scale = Math.max(containerW / GAME.WIDTH, containerH / GAME.HEIGHT);
+        const cropX = Math.max(0, (GAME.WIDTH * scale - containerW) / 2 / scale);
+        const cropY = Math.max(0, (GAME.HEIGHT * scale - containerH) / 2 / scale);
+        return Utils._buildViewSafe(cropX, cropY, edgePad);
+    },
+
+    _buildViewSafe(cropX, cropY, edgePad) {
+        const left = cropX + edgePad;
+        const top = cropY + edgePad;
+        const right = GAME.WIDTH - cropX - edgePad;
+        const bottom = GAME.HEIGHT - cropY - edgePad;
+        return {
+            padX: left,
+            padY: top,
+            left,
+            top,
+            right,
+            bottom,
+            contentWidth: Math.max(120, right - left),
+            contentHeight: Math.max(120, bottom - top),
+            centerX: GAME.WIDTH / 2,
+        };
+    },
+
+    getSafeWidth() {
+        return Utils.getViewSafe().contentWidth;
+    },
+
+    getSafeCenterX() {
+        return Utils.getViewSafe().centerX;
+    },
+
+    _font(fontSpec, size) {
+        return fontSpec.replace(/\{size\}/g, String(size));
+    },
+
+    measureTextWidth(ctx, text, fontSpec, size) {
+        ctx.font = Utils._font(fontSpec, size);
+        return ctx.measureText(text).width;
+    },
+
+    fitFontSize(ctx, text, maxSize, minSize, fontSpec, maxWidth) {
+        const maxW = maxWidth ?? Utils.getSafeWidth();
+        let size = maxSize;
+        while (size > minSize) {
+            if (Utils.measureTextWidth(ctx, text, fontSpec, size) <= maxW) {
+                return size;
+            }
+            size -= 1;
+        }
+        return minSize;
+    },
+
+    wrapTextLines(ctx, text, size, fontSpec, maxWidth) {
+        const maxW = maxWidth ?? Utils.getSafeWidth();
+        const words = text.split(' ');
+        const lines = [];
+        let line = words[0] || '';
+
+        for (let i = 1; i < words.length; i++) {
+            const next = `${line} ${words[i]}`;
+            if (Utils.measureTextWidth(ctx, next, fontSpec, size) <= maxW) {
+                line = next;
+            } else {
+                lines.push(line);
+                line = words[i];
+            }
+        }
+        if (line) lines.push(line);
+        return lines;
+    },
+
+    drawFitCenterText(ctx, text, y, maxSize, minSize, fontSpec, x, maxWidth) {
+        const size = Utils.fitFontSize(ctx, text, maxSize, minSize, fontSpec, maxWidth);
+        ctx.font = Utils._font(fontSpec, size);
+        ctx.textAlign = 'center';
+        ctx.fillText(text, x ?? Utils.getSafeCenterX(), y);
+        return size;
+    },
+
+    drawFitCenterWrapped(ctx, text, startY, lineHeight, maxSize, minSize, fontSpec, x, maxWidth) {
+        const maxW = maxWidth ?? Utils.getSafeWidth();
+        let size = maxSize;
+        let lines = [];
+
+        while (size >= minSize) {
+            lines = Utils.wrapTextLines(ctx, text, size, fontSpec, maxW);
+            const tooWide = lines.some((line) => Utils.measureTextWidth(ctx, line, fontSpec, size) > maxW);
+            if (!tooWide) break;
+            size -= 1;
+        }
+
+        ctx.font = Utils._font(fontSpec, size);
+        ctx.textAlign = 'center';
+        const cx = x ?? Utils.getSafeCenterX();
+        lines.forEach((line, i) => {
+            ctx.fillText(line, cx, startY + i * lineHeight);
+        });
+        return { size, lineCount: lines.length };
+    },
+
+    drawFitLeftText(ctx, text, x, y, maxSize, minSize, fontSpec, maxWidth) {
+        const size = Utils.fitFontSize(ctx, text, maxSize, minSize, fontSpec, maxWidth);
+        ctx.font = Utils._font(fontSpec, size);
+        ctx.textAlign = 'left';
+        ctx.fillText(text, x, y);
+        return size;
+    },
 };
