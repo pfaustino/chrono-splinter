@@ -33,6 +33,16 @@ const UI = {
         document.getElementById('weapon-bar').style.opacity = '0';
     },
 
+    showStartOverlay() {
+        const overlay = document.getElementById('start-overlay');
+        if (overlay) overlay.classList.remove('hidden');
+    },
+
+    hideStartOverlay() {
+        const overlay = document.getElementById('start-overlay');
+        if (overlay) overlay.classList.add('hidden');
+    },
+
     update(player, chapter) {
         this.scoreEl.textContent = Utils.padNumber(player.score, 7);
         this.coinsEl.textContent = player.coins;

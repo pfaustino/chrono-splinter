@@ -62,13 +62,26 @@ const Game = {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
 
-        // Set canvas size
+        // Logical resolution (game coordinates); display size set separately
         this.canvas.width = GAME.WIDTH;
         this.canvas.height = GAME.HEIGHT;
+
+        this.resizeDisplay();
+        window.addEventListener('resize', () => this.resizeDisplay());
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => this.resizeDisplay(), 150);
+        });
+        window.visualViewport?.addEventListener('resize', () => this.resizeDisplay());
+        requestAnimationFrame(() => {
+            this.resizeDisplay();
+            requestAnimationFrame(() => this.resizeDisplay());
+        });
 
         // Initialize systems
         Input.init();
         UI.init();
+        UI.showStartOverlay();
+        this.bindStartOverlay();
         Audio.init();
 
         // Create managers
@@ -97,11 +110,90 @@ const Game = {
         this.lastTime = performance.now();
         requestAnimationFrame((t) => this.loop(t));
 
+        DevPanel.init();
+
         console.log(`🚀 The Chrono-Splinter v${GAME.VERSION} initialized!`);
+    },
+
+    /**
+     * Desktop: fit 800×600 shell in window. Mobile: shell fills viewport;
+     * canvas cover-scales inside the play area (HUD/weapons stay uncropped).
+     */
+    resizeDisplay() {
+        const shell = document.getElementById('game-shell');
+        const container = this.canvas?.parentElement;
+        const canvas = this.canvas;
+        if (!shell || !container || !canvas) return;
+
+        const vw = window.visualViewport?.width ?? window.innerWidth;
+        const vh = window.visualViewport?.height ?? window.innerHeight;
+        const isDesktop = vw > 900 && vh > 700;
+        const gameAspect = GAME.WIDTH / GAME.HEIGHT;
+
+        shell.classList.toggle('fill-viewport', !isDesktop);
+        container.style.display = '';
+        container.style.alignItems = '';
+        container.style.justifyContent = '';
+        container.style.overflow = '';
+        canvas.style.margin = '';
+
+        if (isDesktop) {
+            const hudEl = document.getElementById('hud');
+            const weaponEl = document.getElementById('weapon-bar');
+            const chromeH = (hudEl?.offsetHeight ?? 40) + (weaponEl?.offsetHeight ?? 68);
+            const maxGameH = Math.max(120, vh - chromeH);
+
+            let gameW = Math.min(vw, GAME.WIDTH);
+            let gameH = gameW / gameAspect;
+            if (gameH > maxGameH) {
+                gameH = maxGameH;
+                gameW = gameH * gameAspect;
+            }
+            gameW = Math.min(gameW, GAME.WIDTH);
+            gameH = Math.min(gameH, GAME.HEIGHT);
+
+            shell.style.width = `${Math.floor(gameW)}px`;
+            shell.style.height = '';
+            container.style.height = `${Math.floor(gameH)}px`;
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+            return;
+        }
+
+        // Mobile: full viewport shell; canvas covers the flex middle band
+        shell.style.width = '100vw';
+        shell.style.height = '100dvh';
+        container.style.height = '';
+        container.style.flex = '1';
+        container.style.display = 'flex';
+        container.style.alignItems = 'center';
+        container.style.justifyContent = 'center';
+        container.style.overflow = 'hidden';
+
+        const containerW = container.clientWidth;
+        const containerH = container.clientHeight;
+        if (containerW <= 0 || containerH <= 0) return;
+
+        const scale = Math.max(containerW / GAME.WIDTH, containerH / GAME.HEIGHT);
+        canvas.style.width = `${Math.floor(GAME.WIDTH * scale)}px`;
+        canvas.style.height = `${Math.floor(GAME.HEIGHT * scale)}px`;
+    },
+
+    bindStartOverlay() {
+        const overlay = document.getElementById('start-overlay');
+        if (!overlay) return;
+        const tryStart = () => {
+            if (this.waitingForInput) this.startGame();
+        };
+        overlay.addEventListener('click', tryStart);
+        overlay.addEventListener('keydown', (e) => {
+            if (e.code === 'Enter' || e.code === 'Space') tryStart();
+        });
     },
 
     startGame() {
         this.waitingForInput = false;
+        UI.hideStartOverlay();
 
         UI.hideGameplayUI(); // Ensure UI is hidden for intro
 
@@ -253,15 +345,7 @@ const Game = {
 
         // DEBUG: Press 'B' to skip to boss
         if (Input.isPressed('KeyB') && !this.boss && !this.debugBossSpawned) {
-            this.debugBossSpawned = true;
-            this.enemyManager.clear();
-            this.bulletManager.clear();
-            this.waveManager.currentWave = 10;
-            this.waveManager.bossWave = true;
-            this.waveMessage = 'DEBUG: SKIPPING TO BOSS';
-            this.waveMessageTimer = 2000;
-            this.spawnBoss();
-            console.log('🔧 DEBUG: Skipped to boss fight');
+            this.devSkipToBoss();
         }
 
         // DEBUG: Press 'I' to preview chapter intros
@@ -612,21 +696,6 @@ const Game = {
         if (GameMap.active) {
             GameMap.draw(ctx);
         }
-
-        // Click to Start Overlay
-        if (this.waitingForInput) {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-            ctx.fillRect(0, 0, GAME.WIDTH, GAME.HEIGHT);
-
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 32px "Courier New"';
-            ctx.textAlign = 'center';
-            ctx.fillText('CLICK OR PRESS KEY TO START', GAME.WIDTH / 2, GAME.HEIGHT / 2);
-
-            ctx.font = '16px "Courier New"';
-            ctx.fillStyle = '#888';
-            ctx.fillText('(Required for Audio)', GAME.WIDTH / 2, GAME.HEIGHT / 2 + 40);
-        }
     },
 
     drawWaveMessage(ctx) {
@@ -727,6 +796,131 @@ const Game = {
 
     toggleDebug() {
         this.debugMode = !this.debugMode;
+    },
+
+    devGodMode: false,
+
+    setDevGodMode(enabled) {
+        this.devGodMode = enabled;
+        if (enabled && this.player) {
+            this.player.invincible = true;
+            this.player.invincibleUntil = Number.MAX_SAFE_INTEGER;
+        } else if (this.player) {
+            this.player.invincible = false;
+            this.player.invincibleUntil = 0;
+        }
+    },
+
+    devClearCombatState() {
+        this.enemyManager.clear();
+        this.bulletManager.clear();
+        this.boss = null;
+        this.victoryTimer = 0;
+        this.chapterComplete = false;
+        this.inShop = false;
+        if (typeof Shop !== 'undefined' && Shop.close) Shop.close();
+    },
+
+    devNextWave() {
+        if (!this.waveManager || this.inIntro || this.waitingForInput) return;
+
+        if (this.boss) {
+            this.onBossDefeated();
+            return;
+        }
+
+        this.devClearCombatState();
+
+        const nextWave = this.waveManager.currentWave + 1;
+        if (nextWave > this.waveManager.totalWaves) {
+            this.waveMessage = 'DEV: All waves complete';
+            this.waveMessageTimer = 2000;
+            this.waveManager.waveComplete = true;
+            return;
+        }
+
+        this.waveManager.bossWave = false;
+        this.waveManager.waveActive = false;
+        this.waveManager.waveComplete = false;
+        this.waveManager.enemiesRemaining = 0;
+        this.waveMessage = this.waveManager.startWave(nextWave, this.enemyManager);
+        this.waveMessageTimer = 2000;
+
+        if (this.waveManager.bossWave) {
+            this.spawnBoss();
+        }
+    },
+
+    devSkipToBoss() {
+        if (!this.waveManager || this.boss || this.debugBossSpawned || this.inIntro || this.waitingForInput) {
+            return;
+        }
+
+        this.debugBossSpawned = true;
+        this.devClearCombatState();
+        this.waveManager.currentWave = this.waveManager.totalWaves;
+        this.waveManager.bossWave = true;
+        this.waveManager.waveActive = false;
+        this.waveManager.waveComplete = false;
+        this.waveMessage = 'DEV: SKIPPING TO BOSS';
+        this.waveMessageTimer = 2000;
+        this.spawnBoss();
+    },
+
+    devNextChapter() {
+        if (this.inIntro || this.waitingForInput) return;
+
+        this.devClearCombatState();
+        this.inIntro = false;
+        this.inShop = false;
+        UI.showGameplayUI();
+
+        this.currentChapter++;
+        if (this.currentChapter > 12) {
+            this.showVictory();
+            return;
+        }
+
+        this.beginChapter();
+    },
+
+    devJumpToChapter(chapter) {
+        if (this.inIntro || this.waitingForInput) return;
+        if (chapter < 1 || chapter > 12) return;
+
+        this.devClearCombatState();
+        this.inIntro = false;
+        this.inShop = false;
+        UI.showGameplayUI();
+        this.currentChapter = chapter;
+        this.beginChapter();
+    },
+
+    devKillAllEnemies() {
+        if (!this.enemyManager) return;
+
+        for (const enemy of this.enemyManager.enemies) {
+            enemy.active = false;
+        }
+        this.enemyManager.enemies = [];
+
+        if (this.waveManager) {
+            this.waveManager.enemiesRemaining = 0;
+        }
+
+        if (this.boss) {
+            this.onBossDefeated();
+        }
+    },
+
+    devAddCoins(amount) {
+        if (!this.player) return;
+        this.player.addCoins(amount);
+    },
+
+    devRefillLives() {
+        if (!this.player) return;
+        this.player.lives = PLAYER.MAX_LIVES;
     },
 
     triggerShake(intensity, duration) {
