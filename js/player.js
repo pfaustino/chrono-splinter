@@ -208,6 +208,7 @@ class Player {
      * Take damage
      */
     takeDamage(amount) {
+        if (typeof Game !== 'undefined' && Game.devGodMode) return false;
         if (this.invincible) return false;
 
         // Check for shield power-up

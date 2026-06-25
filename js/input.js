@@ -45,10 +45,10 @@ const Input = {
             this.keys[e.code] = false;
         });
 
-        // Handle window blur (release all keys)
+        // Handle window blur (release all keys and mouse drag)
         window.addEventListener('blur', () => {
             this.keys = {};
-            this.touch.active = false;
+            this.endMouseDrag();
         });
 
         // Gamepad events
@@ -71,11 +71,10 @@ const Input = {
         this.canvas.addEventListener('touchend', (e) => this.handleTouchEnd(e), { passive: false });
         this.canvas.addEventListener('touchcancel', (e) => this.handleTouchEnd(e), { passive: false });
 
-        // Mouse events (desktop mouse drag, simulates touch)
+        // Mouse: start on canvas; move/up on window so drag survives leaving the canvas/window edge
         this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-        this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-        this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
-        this.canvas.addEventListener('mouseleave', (e) => this.handleMouseUp(e));
+        window.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+        window.addEventListener('mouseup', (e) => this.handleMouseUp(e));
     },
 
     /**
@@ -133,8 +132,9 @@ const Input = {
         this.touch.targetY = null;
     },
 
-    // Mouse handlers (for desktop drag testing)
+    // Mouse handlers (desktop drag — ship follows cursor while LMB held)
     handleMouseDown(e) {
+        if (e.button !== 0) return;
         const coords = this.getCanvasCoords(e.clientX, e.clientY);
         this.touch.active = true;
         this.touch.startX = coords.x;
@@ -147,6 +147,10 @@ const Input = {
 
     handleMouseMove(e) {
         if (!this.touch.active) return;
+        if (typeof e.buttons === 'number' && (e.buttons & 1) === 0) {
+            this.endMouseDrag();
+            return;
+        }
         const coords = this.getCanvasCoords(e.clientX, e.clientY);
         this.touch.currentX = coords.x;
         this.touch.currentY = coords.y;
@@ -155,6 +159,11 @@ const Input = {
     },
 
     handleMouseUp(e) {
+        if (e.button !== 0) return;
+        this.endMouseDrag();
+    },
+
+    endMouseDrag() {
         this.touch.active = false;
         this.touch.targetX = null;
         this.touch.targetY = null;

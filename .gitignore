@@ -4,7 +4,9 @@ Thumbs.db
 
 # Build artifacts
 release/
+dist/
 *.zip
+test-results/
 
 # Logs
 *.log
